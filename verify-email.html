@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Verify Email – Rene Coffee</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
+  <link rel="stylesheet" href="css/open-iconic-bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/icomoon.css">
+  <style>
+    .auth-wrap { min-height: 70vh; display:flex; align-items:center; padding: 80px 0 40px; }
+    .auth-card {
+      background: #1a1a1a; border: 1px solid #333; border-radius: 12px;
+      padding: 40px 32px; max-width: 460px; margin: 0 auto; color: #fff; text-align: center;
+    }
+    .auth-card h2 { font-family: 'Josefin Sans', sans-serif; color: #c49b63; margin-bottom: 8px; }
+    .auth-card .sub { color: #aaa; margin-bottom: 24px; font-size: 14px; line-height: 1.6; }
+    .btn-auth {
+      width: 100%; padding: 14px; border: none; border-radius: 6px;
+      background: #c49b63; color: #111; font-weight: 600; cursor: pointer; margin-bottom: 10px;
+    }
+    .btn-auth:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-outline {
+      width: 100%; padding: 14px; border: 1px solid #444; border-radius: 6px;
+      background: transparent; color: #ccc; cursor: pointer; margin-bottom: 10px;
+    }
+    #auth-msg { margin-top: 12px; font-size: 14px; min-height: 20px; }
+    .text-err { color: #ff6b6b; }
+    .text-ok { color: #51cf66; }
+    .email-highlight { color: #c49b63; font-weight: 600; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark ftco_navbar bg-dark ftco-navbar-light" id="ftco-navbar">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Coffee<small>Blend</small></a>
+      <div class="collapse navbar-collapse" id="ftco-nav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
+          <li class="nav-item"><a href="login.html" class="nav-link">Login</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <section class="auth-wrap">
+    <div class="container">
+      <div class="auth-card">
+        <h2>Verify your email</h2>
+        <p class="sub" id="sub-text">
+          You must verify your email before checkout. Open the message we sent and click the link, then return here.
+        </p>
+        <p class="sub" id="email-line" style="display:none;">
+          Signed in as <span class="email-highlight" id="user-email"></span>
+        </p>
+        <button type="button" class="btn-auth" id="btn-resend">Resend verification email</button>
+        <button type="button" class="btn-auth" id="btn-refresh" style="background:#333;color:#c49b63;">I verified – Continue to Checkout</button>
+        <button type="button" class="btn-outline" id="btn-logout">Use a different account</button>
+        <div id="auth-msg"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    const msg = document.getElementById('auth-msg');
+    const nextUrl = sessionStorage.getItem('coffeeBlendAuthRedirect') || 'checkout.html';
+
+    (async function () {
+      if (!window.FIREBASE_ENABLED) {
+        window.location.href = nextUrl;
+        return;
+      }
+      await CoffeeAuth.init();
+      if (!CoffeeAuth.user) {
+        CoffeeAuth.requireAuth(nextUrl);
+        return;
+      }
+      if (CoffeeAuth.user.emailVerified) {
+        window.location.href = nextUrl;
+        return;
+      }
+      document.getElementById('email-line').style.display = 'block';
+      document.getElementById('user-email').textContent = CoffeeAuth.user.email || '';
+    })();
+
+    document.getElementById('btn-resend').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-resend');
+      btn.disabled = true;
+      msg.textContent = '';
+      try {
+        await CoffeeAuth.resendVerification();
+        msg.className = 'text-ok';
+        msg.textContent = 'Verification email sent. Check inbox and spam, then click the link.';
+      } catch (e) {
+        msg.className = 'text-err';
+        msg.textContent = e.message || 'Could not resend';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-refresh');
+      btn.disabled = true;
+      msg.textContent = '';
+      try {
+        await CoffeeAuth.init();
+        // Reload user from Firebase to get fresh emailVerified
+        if (firebase.auth().currentUser) {
+          await firebase.auth().currentUser.reload();
+          CoffeeAuth.user = firebase.auth().currentUser;
+        }
+        if (CoffeeAuth.user && CoffeeAuth.user.emailVerified) {
+          msg.className = 'text-ok';
+          msg.textContent = 'Email verified! Redirecting…';
+          sessionStorage.removeItem('coffeeBlendAuthRedirect');
+          setTimeout(() => { window.location.href = nextUrl; }, 800);
+        } else {
+          msg.className = 'text-err';
+          msg.textContent = 'Still not verified. Open the email link first, then try again.';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        msg.className = 'text-err';
+        msg.textContent = e.message || 'Check failed';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await CoffeeAuth.logout();
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+</html>
