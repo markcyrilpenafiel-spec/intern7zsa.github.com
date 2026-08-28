@@ -100,7 +100,7 @@
     .pending {
       color: #f0ad4e;
     }
-    .Success {
+    .success {
       color: #51cf66;
       font-weight: 600;
     }
@@ -194,7 +194,7 @@
         // Customer already paid → redirect to S
         
         uccess
-        statusEl.className = 'Success';
+        statusEl.className = 'success';
         statusEl.innerHTML = 'Payment received! Redirecting...';
 
         // Clear cart
@@ -203,7 +203,7 @@
 
         // Redirect after short delay
         setTimeout(() => {
-          window.location.href = 'Success.html';
+          window.location.href = 'success.html';
         }, 1200);
 
         return true; // stop polling
