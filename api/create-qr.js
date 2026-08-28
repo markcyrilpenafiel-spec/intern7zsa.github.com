@@ -1,6 +1,6 @@
 // api/create-qr.js
 
-const PAYMONGO_SECRET_KEY = "sk_test_YOUR_SECRET_KEY_HERE"; // ← replace this
+const PAYMONGO_SECRET_KEY = "sk_live_cPt11pVLZnJEsesJgsKsczEH"; // ← replace this
 
 module.exports = async (req, res) => {
   // CORS headers
