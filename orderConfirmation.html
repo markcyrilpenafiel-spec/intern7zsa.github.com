@@ -188,7 +188,15 @@
       const res = await fetch('https://intern7zsa-github-com.vercel.app/api/check-payment?id=' + encodeURIComponent(orderData.payment_intent_id));
       const data = await res.json();
       if (data.paid || data.status === 'succeeded') {
-        statusEl.innerHTML = '<div style="color:#51cf66;font-weight:600;">Payment received! Thank you.</div>';
+  statusEl.innerHTML = '<div style="color:#51cf66;font-weight:600;">Payment received! Redirecting...</div>';
+  
+  // Clear cart
+  localStorage.removeItem('coffeeBlendCart');
+  
+  // Go to success page after 1.5 seconds
+  setTimeout(() => {
+    window.location.href = 'success.html';
+  }, 1500);
         try { localStorage.removeItem('coffeeBlendCart'); } catch(e) {}
         // Notify shop owner by email (Gmail / OWNER_EMAIL in config.php)
         try {
