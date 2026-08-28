@@ -100,7 +100,7 @@
     .pending {
       color: #f0ad4e;
     }
-    .success {
+    .Success {
       color: #51cf66;
       font-weight: 600;
     }
@@ -191,8 +191,10 @@
       const data = await res.json();
 
       if (data.paid || data.status === 'succeeded') {
-        // Customer already paid → redirect to success
-        statusEl.className = 'success';
+        // Customer already paid → redirect to S
+        
+        uccess
+        statusEl.className = 'Success';
         statusEl.innerHTML = 'Payment received! Redirecting...';
 
         // Clear cart
