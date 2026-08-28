@@ -289,25 +289,6 @@
   // ====================== CART SYSTEM ======================
   const CART_KEY = 'coffeeBlendCart';
 
-  // Default items (only used if cart is empty for first time)
-  const defaultItems = [
-    {
-      id: 'latte',
-      name: 'Creamy Latte Coffee',
-      price: 1,
-      image: 'images/menu-2.jpg',
-      quantity: 1,
-      description: 'Delicious creamy latte made with premium beans'
-    },
-    {
-      id: 'ribs',
-      name: 'Grilled Ribs Beef',
-      price: 1,
-      image: 'images/dish-2.jpg',
-      quantity: 1,
-      description: 'Tender grilled ribs with special seasoning'
-    }
-  ];
 
   function getCart() {
     const cart = localStorage.getItem(CART_KEY);
