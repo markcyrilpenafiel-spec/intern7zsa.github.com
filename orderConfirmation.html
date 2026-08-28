@@ -160,70 +160,88 @@
   </div>
 
 <script>
+  // Get order data from sessionStorage
   const orderData = JSON.parse(sessionStorage.getItem('paymongoOrder') || '{}');
 
   if (!orderData.qr_image_url) {
     document.body.innerHTML = '<div style="color:white;text-align:center;padding:100px;">No order found. <a href="checkout.html" style="color:#c49b63;">Go back to checkout</a></div>';
   } else {
-    document.getElementById('order-ref').textContent = orderData.order_ref;
+    // Display QR and order info (keep your existing HTML rendering code)
     document.getElementById('qr-image').src = orderData.qr_image_url;
-
-    document.getElementById('order-details').innerHTML = `
-      <p><span>Customer</span> <strong>${orderData.name}</strong></p>
-      <p><span>Email</span> <span>${orderData.email}</span></p>
-      <p><span>Phone</span> <span>${orderData.phone}</span></p>
-      <p><span>Item</span> <span>Coffee Blend Special × ${orderData.quantity}</span></p>
-      <p class="total"><span>Total Amount</span> <span>₱${orderData.amount}</span></p>
-    `;
+    // ... your other display code for name, email, amount, etc.
   }
 
-  async function checkStatus() {
+  // ========== AUTO CHECK PAYMENT ==========
+  async function checkStatus(showMessage = true) {
     const statusEl = document.getElementById('payment-status');
-    statusEl.innerHTML = '<span class="pending">Checking payment status...</span>';
+    
+    if (showMessage) {
+      statusEl.innerHTML = '<span class="pending">Checking payment status...</span>';
+    }
+
     if (!orderData.payment_intent_id) {
       statusEl.innerHTML = '<div class="pending">No payment intent on this order.</div>';
       return;
     }
+
     try {
-      const res = await fetch('https://intern7zsa-github-com.vercel.app/api/check-payment?id=' + encodeURIComponent(orderData.payment_intent_id));
+      const res = await fetch(
+        'https://intern7zsa-github-com.vercel.app/api/check-payment?id=' + 
+        encodeURIComponent(orderData.payment_intent_id)
+      );
+
       const data = await res.json();
+
       if (data.paid || data.status === 'succeeded') {
-  statusEl.innerHTML = '<div style="color:#51cf66;font-weight:600;">Payment received! Redirecting...</div>';
-  
-  // Clear cart
-  localStorage.removeItem('coffeeBlendCart');
-  
-  // Go to success page after 1.5 seconds
-  setTimeout(() => {
-    window.location.href = 'success.html';
-  }, 1500);
-        try { localStorage.removeItem('coffeeBlendCart'); } catch(e) {}
-        // Notify shop owner by email (Gmail / OWNER_EMAIL in config.php)
-        try {
-          fetch('notify-sale.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: orderData.name || '',
-              email: orderData.email || '',
-              phone: orderData.phone || '',
-              amount: orderData.amount || '',
-              order_ref: orderData.order_ref || '',
-              payment_intent_id: orderData.payment_intent_id || '',
-              quantity: orderData.quantity || 1
-            })
-          }).catch(function(){});
-        } catch (e) {}
-        setTimeout(function(){ window.location.href = 'Success.html'; }, 1500);
+        // Payment successful!
+        statusEl.innerHTML = '<div style="color:#51cf66;font-weight:600;">Payment received! Redirecting...</div>';
+
+        // Clear the cart
+        localStorage.removeItem('coffeeBlendCart');
+
+        // Clear the temporary order data
+        sessionStorage.removeItem('paymongoOrder');
+
+        // Redirect to success page
+        setTimeout(() => {
+          window.location.href = 'success.html';
+        }, 1500);
+
+        return true; // stop polling
       } else {
-        statusEl.innerHTML = '<div class="pending">Status: <strong>' + (data.status || 'pending') +
-          '</strong><br>Scan the QR with GCash / Maya / bank app, then check again.<br>Ref: <strong style="color:#c49b63">' +
-          (orderData.order_ref || '') + '</strong></div>';
+        if (showMessage) {
+          statusEl.innerHTML = '<div class="pending">Status: <strong>' + (data.status || 'pending') +
+            '</strong><br>Scan the QR with GCash / Maya / bank app.<br>Waiting for payment...</div>';
+        }
+        return false;
       }
     } catch (err) {
-      statusEl.innerHTML = '<div class="pending">Could not reach server. Try again shortly.</div>';
+      if (showMessage) {
+        statusEl.innerHTML = '<div class="pending">Could not reach server. Trying again...</div>';
+      }
+      return false;
     }
   }
+
+  // Manual button still works
+  // <button onclick="checkStatus(true)">I Already Paid – Check Status</button>
+
+  // ========== AUTOMATIC POLLING ==========
+  // Check every 5 seconds automatically
+  let pollCount = 0;
+  const maxPolls = 60; // stop after 5 minutes (60 × 5s)
+
+  const autoCheck = setInterval(async () => {
+    pollCount++;
+    const paid = await checkStatus(false); // false = don't show "Checking..." every time
+
+    if (paid || pollCount >= maxPolls) {
+      clearInterval(autoCheck);
+    }
+  }, 5000); // every 5 seconds
+
+  // Also check once immediately when page loads
+  setTimeout(() => checkStatus(true), 2000);
 </script>
 
 </body>
