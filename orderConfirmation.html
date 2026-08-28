@@ -185,7 +185,7 @@
       return;
     }
     try {
-      const res = await fetch('check-payment.php?id=' + encodeURIComponent(orderData.payment_intent_id));
+      const res = await fetch('https://intern7zsa-github-com.vercel.app/api/check-payment?id=' + encodeURIComponent(orderData.payment_intent_id));
       const data = await res.json();
       if (data.paid || data.status === 'succeeded') {
         statusEl.innerHTML = '<div style="color:#51cf66;font-weight:600;">Payment received! Thank you.</div>';
