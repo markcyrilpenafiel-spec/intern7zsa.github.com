@@ -1,425 +1,643 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Coffee Blend - Best Coffee Experience</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    
-    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Great+Vibes" rel="stylesheet">
+<head>
+  <title>Baterbonia Cafe - Best Coffee Experience</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Great+Vibes" rel="stylesheet">
+  <link rel="stylesheet" href="css/open-iconic-bootstrap.min.css">
+  <link rel="stylesheet" href="css/animate.css">
+  <link rel="stylesheet" href="css/owl.carousel.min.css">
+  <link rel="stylesheet" href="css/owl.theme.default.min.css">
+  <link rel="stylesheet" href="css/magnific-popup.css">
+  <link rel="stylesheet" href="css/aos.css">
+  <link rel="stylesheet" href="css/ionicons.min.css">
+  <link rel="stylesheet" href="css/bootstrap-datepicker.css">
+  <link rel="stylesheet" href="css/jquery.timepicker.css">
+  <link rel="stylesheet" href="css/flaticon.css">
+  <link rel="stylesheet" href="css/icomoon.css">
+  <link rel="stylesheet" href="css/style.css">
 
-    <link rel="stylesheet" href="css/open-iconic-bootstrap.min.css">
-    <link rel="stylesheet" href="css/animate.css">
-    <link rel="stylesheet" href="css/owl.carousel.min.css">
-    <link rel="stylesheet" href="css/owl.theme.default.min.css">
-    <link rel="stylesheet" href="css/magnific-popup.css">
-    <link rel="stylesheet" href="css/aos.css">
-    <link rel="stylesheet" href="css/ionicons.min.css">
-    <link rel="stylesheet" href="css/bootstrap-datepicker.css">
-    <link rel="stylesheet" href="css/jquery.timepicker.css">
-    <link rel="stylesheet" href="css/flaticon.css">
-    <link rel="stylesheet" href="css/icomoon.css">
-    <link rel="stylesheet" href="css/style.css">
-  </head>
-  <body>
+  <style>
+    /* ===== Auth & Modal Styles ===== */
+    .auth-btn {
+      background: #c49b63;
+      color: #fff !important;
+      border-radius: 30px;
+      padding: 6px 18px !important;
+      font-size: 14px;
+      font-weight: 500;
+      margin-left: 12px;
+      transition: all 0.3s ease;
+    }
+    .auth-btn:hover {
+      background: #a67c4a;
+      color: #fff !important;
+    }
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 12px;
+    }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #c49b63;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .user-dropdown {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: #2a2a2a;
+      border-radius: 12px;
+      padding: 12px 0;
+      min-width: 180px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 9999;
+    }
+    .user-dropdown.show { display: block; }
+    .user-dropdown a, .user-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .user-dropdown a:hover, .user-dropdown button:hover {
+      background: #3a3a3a;
+      color: #c49b63;
+    }
 
-  	<nav class="navbar navbar-expand-lg navbar-dark ftco_navbar bg-dark ftco-navbar-light" id="ftco-navbar">
-	    <div class="container">
-	      <a class="navbar-brand" href="index.html">Coffee<small>Blend</small></a>
-	      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#ftco-nav" aria-controls="ftco-nav" aria-expanded="false" aria-label="Toggle navigation">
-	        <span class="oi oi-menu"></span> Menu
-	      </button>
-	      <div class="collapse navbar-collapse" id="ftco-nav">
-	        <ul class="navbar-nav ml-auto">
-	          <li class="nav-item active"><a href="index.html" class="nav-link">Home</a></li>
-	          <li class="nav-item"><a href="menu.html" class="nav-link">Menu</a></li>
-	          <li class="nav-item"><a href="services.html" class="nav-link">Services</a></li>
-	          <li class="nav-item"><a href="blog.html" class="nav-link">Blog</a></li>
-	          <li class="nav-item"><a href="about.html" class="nav-link">About</a></li>
-	          <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="shop.html" id="dropdown04" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Shop</a>
-              <div class="dropdown-menu" aria-labelledby="dropdown04">
-              	<a class="dropdown-item" href="shop.html">Shop</a>
-                <a class="dropdown-item" href="product-single.html">Single Product</a>
-                <a class="dropdown-item" href="cart.html">Cart</a>
-                <a class="dropdown-item" href="checkout.html">Checkout</a>
-              </div>
-            </li>
-	          <li class="nav-item"><a href="contact.html" class="nav-link">Contact</a></li>
-	          <li class="nav-item cart">
-              <a href="cart.html" class="nav-link">
-                <span class="icon icon-shopping_cart"></span>
-                <span class="bag d-flex justify-content-center align-items-center"><small>1</small></span>
-              </a>
-            </li>
-	        </ul>
-	      </div>
-		  </div>
-	  </nav>
-    <!-- END nav -->
-
-    <!-- Hero Slider -->
-    <section class="home-slider owl-carousel">
-      <div class="slider-item" style="background-image: url(images/bg_1.jpg);">
-      	<div class="overlay"></div>
-        <div class="container">
-          <div class="row slider-text justify-content-center align-items-center">
-            <div class="col-md-8 col-sm-12 text-center ftco-animate">
-            	<span class="subheading">Welcome</span>
-              <h1 class="mb-4">The Best Coffee Testing Experience</h1>
-              <p class="mb-4 mb-md-5">A small river named Duden flows by their place and supplies it with the necessary regelialia.</p>
-              <p>
-                <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
-                <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
-              </p>
+    /* Modal */
+    .custom-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    .custom-modal-overlay.show { display: flex; }
+    .custom-modal {
+      background: #2a2a2a;
+      border-radius: 16px;
+      padding: 35px 30px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .custom-modal h3 {
+      color: #c49b63;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+    .custom-modal p {
+      color: #aaa;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .custom-modal .form-group { margin-bottom: 18px; }
+    .custom-modal label {
+      display: block;
+      color: #ccc;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .custom-modal input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 15px;
+      color: #fff;
+      font-size: 15px;
+    }
+    .custom-modal input:focus {
+      outline: none;
+      border-color: #c49b63;
+    }
+    .modal-btn {
+      width: 100%;
+      background: #c49b63;
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .modal-btn:hover { background: #a67c4a; }
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 18px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: #fff; }
+    .auth-switch {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .auth-switch a {
+      color: #c49b63;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .auth-error {
+      color: #ff6b6b;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .form-success {
+      background: #1e3a2f;
+      color: #51cf66;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark ftco_navbar bg-dark ftco-navbar-light" id="ftco-navbar">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Baterbonia<small>Cafe</small></a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#ftco-nav" aria-controls="ftco-nav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="oi oi-menu"></span> Menu
+      </button>
+      <div class="collapse navbar-collapse" id="ftco-nav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item active"><a href="index.html" class="nav-link">Home</a></li>
+          <li class="nav-item"><a href="menu.html" class="nav-link">Menu</a></li>
+          <li class="nav-item"><a href="services.html" class="nav-link">Services</a></li>
+          <li class="nav-item"><a href="blog.html" class="nav-link">Blog</a></li>
+          <li class="nav-item"><a href="about.html" class="nav-link">About</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="shop.html" id="dropdown04" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Shop</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown04">
+              <a class="dropdown-item" href="shop.html">Shop</a>
+              <a class="dropdown-item" href="product-single.html">Single Product</a>
+              <a class="dropdown-item" href="cart.html">Cart</a>
+              <a class="dropdown-item" href="checkout.html">Checkout</a>
             </div>
-          </div>
-        </div>
+          </li>
+          <li class="nav-item"><a href="contact.html" class="nav-link">Contact</a></li>
+
+          <!-- CART -->
+          <li class="nav-item cart">
+            <a href="cart.html" class="nav-link">
+              <span class="icon icon-shopping_cart"></span>
+              <span class="bag d-flex justify-content-center align-items-center">
+                <small id="cart-count">0</small>
+              </span>
+            </a>
+          </li>
+
+          <!-- LOGIN / USER (will be controlled by JS) -->
+          <li class="nav-item" id="auth-nav-item">
+            <a href="javascript:void(0)" class="nav-link auth-btn" id="login-btn">Login</a>
+          </li>
+        </ul>
       </div>
+    </div>
+  </nav>
+  <!-- END nav -->
 
-      <div class="slider-item" style="background-image: url(images/bg_2.jpg);">
-      	<div class="overlay"></div>
-        <div class="container">
-          <div class="row slider-text justify-content-center align-items-center">
-            <div class="col-md-8 col-sm-12 text-center ftco-animate">
-            	<span class="subheading">Welcome</span>
-              <h1 class="mb-4">Amazing Taste &amp; Beautiful Place</h1>
-              <p class="mb-4 mb-md-5">A small river named Duden flows by their place and supplies it with the necessary regelialia.</p>
-              <p>
-                <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
-                <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="slider-item" style="background-image: url(images/bg_3.jpg);">
-      	<div class="overlay"></div>
-        <div class="container">
-          <div class="row slider-text justify-content-center align-items-center">
-            <div class="col-md-8 col-sm-12 text-center ftco-animate">
-            	<span class="subheading">Welcome</span>
-              <h1 class="mb-4">Creamy Hot and Ready to Serve</h1>
-              <p class="mb-4 mb-md-5">A small river named Duden flows by their place and supplies it with the necessary regelialia.</p>
-              <p>
-                <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
-                <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Intro Section -->
-    <section class="ftco-intro">
-    	<div class="container-wrap">
-    		<div class="wrap d-md-flex align-items-xl-end">
-	    		<div class="info">
-	    			<div class="row no-gutters">
-	    				<div class="col-md-4 d-flex ftco-animate">
-	    					<div class="icon"><span class="icon-phone"></span></div>
-	    					<div class="text">
-	    						<h3>000 (123) 456 7890</h3>
-	    						<p>A small river named Duden flows by their place and supplies.</p>
-	    					</div>
-	    				</div>
-	    				<div class="col-md-4 d-flex ftco-animate">
-	    					<div class="icon"><span class="icon-my_location"></span></div>
-	    					<div class="text">
-	    						<h3>198 West 21th Street</h3>
-	    						<p>203 Fake St. Mountain View, San Francisco, California, USA</p>
-	    					</div>
-	    				</div>
-	    				<div class="col-md-4 d-flex ftco-animate">
-	    					<div class="icon"><span class="icon-clock-o"></span></div>
-	    					<div class="text">
-	    						<h3>Open Monday-Friday</h3>
-	    						<p>8:00am - 9:00pm</p>
-	    					</div>
-	    				</div>
-	    			</div>
-	    		</div>
-	    		<div class="book p-4">
-	    			<h3>Book a Table</h3>
-	    			<form action="#" class="appointment-form">
-	    				<div class="d-md-flex">
-		    				<div class="form-group">
-		    					<input type="text" class="form-control" placeholder="First Name">
-		    				</div>
-		    				<div class="form-group ml-md-4">
-		    					<input type="text" class="form-control" placeholder="Last Name">
-		    				</div>
-	    				</div>
-	    				<div class="d-md-flex">
-		    				<div class="form-group">
-		    					<div class="input-wrap">
-		            		<div class="icon"><span class="ion-md-calendar"></span></div>
-		            		<input type="text" class="form-control appointment_date" placeholder="Date">
-	            		</div>
-		    				</div>
-		    				<div class="form-group ml-md-4">
-		    					<div class="input-wrap">
-		            		<div class="icon"><span class="ion-ios-clock"></span></div>
-		            		<input type="text" class="form-control appointment_time" placeholder="Time">
-	            		</div>
-		    				</div>
-		    				<div class="form-group ml-md-4">
-		    					<input type="text" class="form-control" placeholder="Phone">
-		    				</div>
-	    				</div>
-	    				<div class="d-md-flex">
-	    					<div class="form-group">
-		              <textarea name="" id="" cols="30" rows="2" class="form-control" placeholder="Message"></textarea>
-		            </div>
-		            <div class="form-group ml-md-4">
-		              <input type="submit" value="Appointment" class="btn btn-white py-3 px-4">
-		            </div>
-	    				</div>
-	    			</form>
-	    		</div>
-    		</div>
-    	</div>
-    </section>
-
-    <!-- About -->
-    <section class="ftco-about d-md-flex">
-    	<div class="one-half img" style="background-image: url(images/about.jpg);"></div>
-    	<div class="one-half ftco-animate">
-    		<div class="overlap">
-	        <div class="heading-section ftco-animate">
-	        	<span class="subheading">Discover</span>
-	          <h2 class="mb-4">Our Story</h2>
-	        </div>
-	        <div>
-	  				<p>On her way she met a copy. The copy warned the Little Blind Text, that where it came from it would have been rewritten a thousand times and everything that was left from its origin would be the word "and" and the Little Blind Text should turn around and return to its own, safe country.</p>
-	  			</div>
-  			</div>
-    	</div>
-    </section>
-
-    <!-- Services -->
-    <section class="ftco-section ftco-services">
-    	<div class="container">
-    		<div class="row">
-          <div class="col-md-4 ftco-animate">
-            <div class="media d-block text-center block-6 services">
-              <div class="icon d-flex justify-content-center align-items-center mb-5">
-              	<span class="flaticon-choices"></span>
-              </div>
-              <div class="media-body">
-                <h3 class="heading">Easy to Order</h3>
-                <p>Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic.</p>
-              </div>
-            </div>      
-          </div>
-          <div class="col-md-4 ftco-animate">
-            <div class="media d-block text-center block-6 services">
-              <div class="icon d-flex justify-content-center align-items-center mb-5">
-              	<span class="flaticon-delivery-truck"></span>
-              </div>
-              <div class="media-body">
-                <h3 class="heading">Fastest Delivery</h3>
-                <p>Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic.</p>
-              </div>
-            </div>      
-          </div>
-          <div class="col-md-4 ftco-animate">
-            <div class="media d-block text-center block-6 services">
-              <div class="icon d-flex justify-content-center align-items-center mb-5">
-              	<span class="flaticon-coffee-bean"></span>
-              </div>
-              <div class="media-body">
-                <h3 class="heading">Quality Coffee</h3>
-                <p>Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic.</p>
-              </div>
-            </div>    
-          </div>
-        </div>
-    	</div>
-    </section>
-
-    <!-- Best Sellers (₱1.00 for testing) -->
-    <section class="ftco-section">
-    	<div class="container">
-    		<div class="row justify-content-center mb-5 pb-3">
-          <div class="col-md-7 heading-section ftco-animate text-center">
-          	<span class="subheading">Discover</span>
-            <h2 class="mb-4">Best Coffee Sellers</h2>
-            <p>All items priced at ₱1.00 for testing purposes.</p>
-          </div>
-        </div>
-        <div class="row">
-        	<div class="col-md-3">
-        		<div class="menu-entry">
-    					<a href="product-single.html" class="img" style="background-image: url(images/menu-1.jpg);"></a>
-    					<div class="text text-center pt-4">
-    						<h3><a href="product-single.html">Coffee Capuccino</a></h3>
-    						<p>A small river named Duden flows by their place and supplies</p>
-    						<p class="price"><span>₱1.00</span></p>
-    						<p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
-    					</div>
-    				</div>
-        	</div>
-        	<div class="col-md-3">
-        		<div class="menu-entry">
-    					<a href="product-single.html" class="img" style="background-image: url(images/menu-2.jpg);"></a>
-    					<div class="text text-center pt-4">
-    						<h3><a href="product-single.html">Coffee Latte</a></h3>
-    						<p>A small river named Duden flows by their place and supplies</p>
-    						<p class="price"><span>₱1.00</span></p>
-    						<p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
-    					</div>
-    				</div>
-        	</div>
-        	<div class="col-md-3">
-        		<div class="menu-entry">
-    					<a href="product-single.html" class="img" style="background-image: url(images/menu-3.jpg);"></a>
-    					<div class="text text-center pt-4">
-    						<h3><a href="product-single.html">Coffee Mocha</a></h3>
-    						<p>A small river named Duden flows by their place and supplies</p>
-    						<p class="price"><span>₱1.00</span></p>
-    						<p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
-    					</div>
-    				</div>
-        	</div>
-        	<div class="col-md-3">
-        		<div class="menu-entry">
-    					<a href="product-single.html" class="img" style="background-image: url(images/menu-4.jpg);"></a>
-    					<div class="text text-center pt-4">
-    						<h3><a href="product-single.html">Coffee Espresso</a></h3>
-    						<p>A small river named Duden flows by their place and supplies</p>
-    						<p class="price"><span>₱1.00</span></p>
-    						<p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
-    					</div>
-    				</div>
-        	</div>
-        </div>
-    	</div>
-    </section>
-
-    <!-- Gallery -->
-    <section class="ftco-gallery">
-    	<div class="container-wrap">
-    		<div class="row no-gutters">
-					<div class="col-md-3 ftco-animate">
-						<a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-1.jpg);">
-							<div class="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span class="icon-search"></span>
-    					</div>
-						</a>
-					</div>
-					<div class="col-md-3 ftco-animate">
-						<a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-2.jpg);">
-							<div class="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span class="icon-search"></span>
-    					</div>
-						</a>
-					</div>
-					<div class="col-md-3 ftco-animate">
-						<a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-3.jpg);">
-							<div class="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span class="icon-search"></span>
-    					</div>
-						</a>
-					</div>
-					<div class="col-md-3 ftco-animate">
-						<a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-4.jpg);">
-							<div class="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span class="icon-search"></span>
-    					</div>
-						</a>
-					</div>
-        </div>
-    	</div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="ftco-footer ftco-section img">
-    	<div class="overlay"></div>
+  <!-- Hero Slider -->
+  <section class="home-slider owl-carousel">
+    <div class="slider-item" style="background-image: url(images/bg_1.jpg);">
+      <div class="overlay"></div>
       <div class="container">
-        <div class="row mb-5">
-          <div class="col-lg-3 col-md-6 mb-5 mb-md-5">
-            <div class="ftco-footer-widget mb-4">
-              <h2 class="ftco-heading-2">About Us</h2>
-              <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts.</p>
-              <ul class="ftco-footer-social list-unstyled float-md-left float-lft mt-5">
-                <li class="ftco-animate"><a href="#"><span class="icon-twitter"></span></a></li>
-                <li class="ftco-animate"><a href="#"><span class="icon-facebook"></span></a></li>
-                <li class="ftco-animate"><a href="#"><span class="icon-instagram"></span></a></li>
-              </ul>
-            </div>
-          </div>
-          <div class="col-lg-4 col-md-6 mb-5 mb-md-5">
-            <div class="ftco-footer-widget mb-4">
-              <h2 class="ftco-heading-2">Recent Blog</h2>
-              <div class="block-21 mb-4 d-flex">
-                <a class="blog-img mr-4" style="background-image: url(images/image_1.jpg);"></a>
-                <div class="text">
-                  <h3 class="heading"><a href="blog-single.html">Even the all-powerful Pointing has no control about</a></h3>
-                  <div class="meta">
-                    <div><a href="#"><span class="icon-calendar"></span> Sept 15, 2018</a></div>
-                    <div><a href="#"><span class="icon-person"></span> Admin</a></div>
-                    <div><a href="#"><span class="icon-chat"></span> 19</a></div>
-                  </div>
-                </div>
-              </div>
-              <div class="block-21 mb-4 d-flex">
-                <a class="blog-img mr-4" style="background-image: url(images/image_2.jpg);"></a>
-                <div class="text">
-                  <h3 class="heading"><a href="blog-single.html">Even the all-powerful Pointing has no control about</a></h3>
-                  <div class="meta">
-                    <div><a href="#"><span class="icon-calendar"></span> Sept 15, 2018</a></div>
-                    <div><a href="#"><span class="icon-person"></span> Admin</a></div>
-                    <div><a href="#"><span class="icon-chat"></span> 19</a></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-lg-2 col-md-6 mb-5 mb-md-5">
-             <div class="ftco-footer-widget mb-4 ml-md-4">
-              <h2 class="ftco-heading-2">Services</h2>
-              <ul class="list-unstyled">
-                <li><a href="#" class="py-2 d-block">Cooked</a></li>
-                <li><a href="#" class="py-2 d-block">Deliver</a></li>
-                <li><a href="#" class="py-2 d-block">Quality Foods</a></li>
-                <li><a href="#" class="py-2 d-block">Mixed</a></li>
-              </ul>
-            </div>
-          </div>
-          <div class="col-lg-3 col-md-6 mb-5 mb-md-5">
-            <div class="ftco-footer-widget mb-4">
-            	<h2 class="ftco-heading-2">Have a Questions?</h2>
-            	<div class="block-23 mb-3">
-	              <ul>
-	                <li><span class="icon icon-map-marker"></span><span class="text">203 Fake St. Mountain View, San Francisco, California, USA</span></li>
-	                <li><a href="#"><span class="icon icon-phone"></span><span class="text">+2 392 3929 210</span></a></li>
-	                <li><a href="#"><span class="icon icon-envelope"></span><span class="text">info@yourdomain.com</span></a></li>
-	              </ul>
-	            </div>
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12 text-center">
+        <div class="row slider-text justify-content-center align-items-center">
+          <div class="col-md-8 col-sm-12 text-center ftco-animate">
+            <span class="subheading">Welcome to</span>
+            <h1 class="mb-4">Baterbonia Cafe</h1>
+            <p class="mb-4 mb-md-5">The best coffee experience in town. Freshly brewed, carefully crafted.</p>
             <p>
-              Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="icon-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
+              <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
+              <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
             </p>
           </div>
         </div>
       </div>
-    </footer>
-    
-    <div id="ftco-loader" class="show fullscreen">
-      <svg class="circular" width="48px" height="48px">
-        <circle class="path-bg" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke="#eeeeee"/>
-        <circle class="path" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke-miterlimit="10" stroke="#F96D00"/>
-      </svg>
     </div>
+    <div class="slider-item" style="background-image: url(images/bg_2.jpg);">
+      <div class="overlay"></div>
+      <div class="container">
+        <div class="row slider-text justify-content-center align-items-center">
+          <div class="col-md-8 col-sm-12 text-center ftco-animate">
+            <span class="subheading">Welcome</span>
+            <h1 class="mb-4">Amazing Taste &amp; Beautiful Place</h1>
+            <p class="mb-4 mb-md-5">Enjoy every sip in a warm and inviting atmosphere.</p>
+            <p>
+              <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
+              <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slider-item" style="background-image: url(images/bg_3.jpg);">
+      <div class="overlay"></div>
+      <div class="container">
+        <div class="row slider-text justify-content-center align-items-center">
+          <div class="col-md-8 col-sm-12 text-center ftco-animate">
+            <span class="subheading">Welcome</span>
+            <h1 class="mb-4">Creamy Hot and Ready to Serve</h1>
+            <p class="mb-4 mb-md-5">From classic espresso to signature blends — we have it all.</p>
+            <p>
+              <a href="checkout.html" class="btn btn-primary p-3 px-xl-4 py-xl-3">Order Now</a>
+              <a href="menu.html" class="btn btn-white btn-outline-white p-3 px-xl-4 py-xl-3">View Menu</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
+  <!-- Intro Section -->
+  <section class="ftco-intro">
+    <div class="container-wrap">
+      <div class="wrap d-md-flex align-items-xl-end">
+        <div class="info">
+          <div class="row no-gutters">
+            <div class="col-md-4 d-flex ftco-animate">
+              <div class="icon"><span class="icon-phone"></span></div>
+              <div class="text">
+                <h3>000 (123) 456 7890</h3>
+                <p>Call us anytime for reservations or inquiries.</p>
+              </div>
+            </div>
+            <div class="col-md-4 d-flex ftco-animate">
+              <div class="icon"><span class="icon-my_location"></span></div>
+              <div class="text">
+                <h3>Baterbonia Cafe</h3>
+                <p>Your favorite neighborhood coffee spot</p>
+              </div>
+            </div>
+            <div class="col-md-4 d-flex ftco-animate">
+              <div class="icon"><span class="icon-clock-o"></span></div>
+              <div class="text">
+                <h3>Open Daily</h3>
+                <p>8:00am - 9:00pm</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOOK A TABLE -->
+        <div class="book p-4">
+          <h3>Book a Table</h3>
+          <div class="form-success" id="booking-success">
+            ✓ Appointment request sent! We'll contact you soon.
+          </div>
+          <form id="booking-form" class="appointment-form">
+            <div class="d-md-flex">
+              <div class="form-group">
+                <input type="text" name="first_name" class="form-control" placeholder="First Name" required>
+              </div>
+              <div class="form-group ml-md-4">
+                <input type="text" name="last_name" class="form-control" placeholder="Last Name" required>
+              </div>
+            </div>
+            <div class="d-md-flex">
+              <div class="form-group">
+                <div class="input-wrap">
+                  <div class="icon"><span class="ion-md-calendar"></span></div>
+                  <input type="text" name="date" class="form-control appointment_date" placeholder="Date" required>
+                </div>
+              </div>
+              <div class="form-group ml-md-4">
+                <div class="input-wrap">
+                  <div class="icon"><span class="ion-ios-clock"></span></div>
+                  <input type="text" name="time" class="form-control appointment_time" placeholder="Time" required>
+                </div>
+              </div>
+              <div class="form-group ml-md-4">
+                <input type="text" name="phone" class="form-control" placeholder="Phone" required>
+              </div>
+            </div>
+            <div class="d-md-flex">
+              <div class="form-group">
+                <textarea name="message" cols="30" rows="2" class="form-control" placeholder="Message / Special request"></textarea>
+              </div>
+              <div class="form-group ml-md-4">
+                <input type="submit" value="Appointment" class="btn btn-white py-3 px-4" id="booking-btn">
+              </div>
+            </div>
+            <!-- Hidden fields for Formspree -->
+            <input type="hidden" name="_subject" value="New Table Booking - Baterbonia Cafe">
+            <input type="hidden" name="_replyto" value="">
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="ftco-about d-md-flex">
+    <div class="one-half img" style="background-image: url(images/about.jpg);"></div>
+    <div class="one-half ftco-animate">
+      <div class="overlap">
+        <div class="heading-section ftco-animate">
+          <span class="subheading">Discover</span>
+          <h2 class="mb-4">Our Story</h2>
+        </div>
+        <div>
+          <p>At Baterbonia Cafe, we believe every cup tells a story. From carefully selected beans to the perfect brew, we craft coffee experiences that bring people together.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="ftco-section ftco-services">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 ftco-animate">
+          <div class="media d-block text-center block-6 services">
+            <div class="icon d-flex justify-content-center align-items-center mb-5">
+              <span class="flaticon-choices"></span>
+            </div>
+            <div class="media-body">
+              <h3 class="heading">Easy to Order</h3>
+              <p>Order online in just a few clicks and pick up or have it delivered.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 ftco-animate">
+          <div class="media d-block text-center block-6 services">
+            <div class="icon d-flex justify-content-center align-items-center mb-5">
+              <span class="flaticon-delivery-truck"></span>
+            </div>
+            <div class="media-body">
+              <h3 class="heading">Fastest Delivery</h3>
+              <p>We deliver hot and fresh coffee right to your door.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 ftco-animate">
+          <div class="media d-block text-center block-6 services">
+            <div class="icon d-flex justify-content-center align-items-center mb-5">
+              <span class="flaticon-coffee-bean"></span>
+            </div>
+            <div class="media-body">
+              <h3 class="heading">Quality Coffee</h3>
+              <p>Only the finest beans, roasted and brewed to perfection.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Best Sellers -->
+  <section class="ftco-section">
+    <div class="container">
+      <div class="row justify-content-center mb-5 pb-3">
+        <div class="col-md-7 heading-section ftco-animate text-center">
+          <span class="subheading">Discover</span>
+          <h2 class="mb-4">Best Coffee Sellers</h2>
+          <p>All items priced at ₱1.00 for testing purposes.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-3">
+          <div class="menu-entry">
+            <a href="product-single.html" class="img" style="background-image: url(images/menu-1.jpg);"></a>
+            <div class="text text-center pt-4">
+              <h3><a href="product-single.html">Coffee Capuccino</a></h3>
+              <p>Rich and creamy classic</p>
+              <p class="price"><span>₱1.00</span></p>
+              <p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="menu-entry">
+            <a href="product-single.html" class="img" style="background-image: url(images/menu-2.jpg);"></a>
+            <div class="text text-center pt-4">
+              <h3><a href="product-single.html">Coffee Latte</a></h3>
+              <p>Smooth and comforting</p>
+              <p class="price"><span>₱1.00</span></p>
+              <p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="menu-entry">
+            <a href="product-single.html" class="img" style="background-image: url(images/menu-3.jpg);"></a>
+            <div class="text text-center pt-4">
+              <h3><a href="product-single.html">Coffee Mocha</a></h3>
+              <p>Chocolate meets coffee</p>
+              <p class="price"><span>₱1.00</span></p>
+              <p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="menu-entry">
+            <a href="product-single.html" class="img" style="background-image: url(images/menu-4.jpg);"></a>
+            <div class="text text-center pt-4">
+              <h3><a href="product-single.html">Coffee Espresso</a></h3>
+              <p>Bold and intense</p>
+              <p class="price"><span>₱1.00</span></p>
+              <p><a href="checkout.html" class="btn btn-primary btn-outline-primary">Order Now</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="ftco-gallery">
+    <div class="container-wrap">
+      <div class="row no-gutters">
+        <div class="col-md-3 ftco-animate">
+          <a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-1.jpg);">
+            <div class="icon mb-4 d-flex align-items-center justify-content-center">
+              <span class="icon-search"></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 ftco-animate">
+          <a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-2.jpg);">
+            <div class="icon mb-4 d-flex align-items-center justify-content-center">
+              <span class="icon-search"></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 ftco-animate">
+          <a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-3.jpg);">
+            <div class="icon mb-4 d-flex align-items-center justify-content-center">
+              <span class="icon-search"></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3 ftco-animate">
+          <a href="#" class="gallery img d-flex align-items-center" style="background-image: url(images/gallery-4.jpg);">
+            <div class="icon mb-4 d-flex align-items-center justify-content-center">
+              <span class="icon-search"></span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="ftco-footer ftco-section img">
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row mb-5">
+        <div class="col-lg-3 col-md-6 mb-5 mb-md-5">
+          <div class="ftco-footer-widget mb-4">
+            <h2 class="ftco-heading-2">About Us</h2>
+            <p>Baterbonia Cafe — where every cup is crafted with passion and served with warmth.</p>
+            <ul class="ftco-footer-social list-unstyled float-md-left float-lft mt-5">
+              <li class="ftco-animate"><a href="#"><span class="icon-twitter"></span></a></li>
+              <li class="ftco-animate"><a href="#"><span class="icon-facebook"></span></a></li>
+              <li class="ftco-animate"><a href="#"><span class="icon-instagram"></span></a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-5 mb-md-5">
+          <div class="ftco-footer-widget mb-4">
+            <h2 class="ftco-heading-2">Recent Blog</h2>
+            <div class="block-21 mb-4 d-flex">
+              <a class="blog-img mr-4" style="background-image: url(images/image_1.jpg);"></a>
+              <div class="text">
+                <h3 class="heading"><a href="blog-single.html">Even the all-powerful Pointing has no control about</a></h3>
+                <div class="meta">
+                  <div><a href="#"><span class="icon-calendar"></span> Sept 15, 2018</a></div>
+                  <div><a href="#"><span class="icon-person"></span> Admin</a></div>
+                  <div><a href="#"><span class="icon-chat"></span> 19</a></div>
+                </div>
+              </div>
+            </div>
+            <div class="block-21 mb-4 d-flex">
+              <a class="blog-img mr-4" style="background-image: url(images/image_2.jpg);"></a>
+              <div class="text">
+                <h3 class="heading"><a href="blog-single.html">Even the all-powerful Pointing has no control about</a></h3>
+                <div class="meta">
+                  <div><a href="#"><span class="icon-calendar"></span> Sept 15, 2018</a></div>
+                  <div><a href="#"><span class="icon-person"></span> Admin</a></div>
+                  <div><a href="#"><span class="icon-chat"></span> 19</a></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-5 mb-md-5">
+          <div class="ftco-footer-widget mb-4 ml-md-4">
+            <h2 class="ftco-heading-2">Services</h2>
+            <ul class="list-unstyled">
+              <li><a href="#" class="py-2 d-block">Cooked</a></li>
+              <li><a href="#" class="py-2 d-block">Deliver</a></li>
+              <li><a href="#" class="py-2 d-block">Quality Foods</a></li>
+              <li><a href="#" class="py-2 d-block">Mixed</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-5 mb-md-5">
+          <div class="ftco-footer-widget mb-4">
+            <h2 class="ftco-heading-2">Have a Questions?</h2>
+            <div class="block-23 mb-3">
+              <ul>
+                <li><span class="icon icon-map-marker"></span><span class="text">Baterbonia Cafe Location</span></li>
+                <li><a href="#"><span class="icon icon-phone"></span><span class="text">+2 392 3929 210</span></a></li>
+                <li><a href="mailto:markcyrilpenafiel@gmail.com"><span class="icon icon-envelope"></span><span class="text">markcyrilpenafiel@gmail.com</span></a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 text-center">
+          <p>
+            Copyright &copy;<script>document.write(new Date().getFullYear());</script> Baterbonia Cafe. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div id="ftco-loader" class="show fullscreen">
+    <svg class="circular" width="48px" height="48px">
+      <circle class="path-bg" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke="#eeeeee"/>
+      <circle class="path" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke-miterlimit="10" stroke="#F96D00"/>
+    </svg>
+  </div>
+
+  <!-- ========== LOGIN MODAL ========== -->
+  <div class="custom-modal-overlay" id="login-modal">
+    <div class="custom-modal">
+      <button class="modal-close" onclick="closeModal('login-modal')">×</button>
+      <h3 id="auth-title">Login</h3>
+      <p id="auth-subtitle">Welcome back to Baterbonia Cafe</p>
+      <div class="auth-error" id="auth-error"></div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••">
+      </div>
+      <button class="modal-btn" id="auth-submit-btn" onclick="handleAuth()">Login</button>
+      <div class="auth-switch">
+        <span id="auth-switch-text">Don't have an account?</span>
+        <a href="javascript:void(0)" id="auth-switch-link" onclick="toggleAuthMode()">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DISPLAY NAME MODAL ========== -->
+  <div class="custom-modal-overlay" id="displayname-modal">
+    <div class="custom-modal">
+      <h3>Welcome!</h3>
+      <p>Please enter a display name so we can identify you.</p>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" id="display-name-input" placeholder="e.g. Cyril" maxlength="30">
+      </div>
+      <button class="modal-btn" onclick="saveDisplayName()">Save & Continue</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery-migrate-3.0.1.min.js"></script>
   <script src="js/popper.min.js"></script>
@@ -429,7 +647,7 @@
   <script src="js/jquery.stellar.min.js"></script>
   <script src="js/owl.carousel.min.js"></script>
   <script src="js/jquery.magnific-popup.min.js"></script>
-  <script src="js/aos.js"></script>6
+  <script src="js/aos.js"></script>
   <script src="js/jquery.animateNumber.min.js"></script>
   <script src="js/bootstrap-datepicker.js"></script>
   <script src="js/jquery.timepicker.min.js"></script>
@@ -437,9 +655,210 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBVWaKrjvy3MaE7SQ74_uJiULgl1JY0H2s&sensor=false"></script>
   <script src="js/google-map.js"></script>
   <script src="js/main.js"></script>
-    
-    <script src="js/firebase-config.js"></script>
+
+  <!-- Your existing files -->
+  <script src="js/firebase-config.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/auth.js"></script>
+
+  <script>
+    // ========== AUTH UI STATE ==========
+    let isLoginMode = true;
+    let currentUser = null;
+
+    // Wait for Firebase Auth (from your auth.js / firebase-config)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Listen for auth state changes (your auth.js should expose this)
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().onAuthStateChanged(user => {
+          currentUser = user;
+          updateAuthUI(user);
+        });
+      } else {
+        // Fallback: check localStorage if you store user there
+        const stored = localStorage.getItem('baterboniaUser');
+        if (stored) {
+          currentUser = JSON.parse(stored);
+          updateAuthUI(currentUser);
+        }
+      }
+
+      // Update cart count if cart.js provides it
+      if (typeof updateCartCount === 'function') updateCartCount();
+      else {
+        const cart = JSON.parse(localStorage.getItem('coffeeBlendCart') || '[]');
+        document.getElementById('cart-count').textContent = cart.length || 0;
+      }
+    });
+
+    function updateAuthUI(user) {
+      const navItem = document.getElementById('auth-nav-item');
+      if (user) {
+        const name = user.displayName || user.email?.split('@')[0] || 'User';
+        const initial = name.charAt(0).toUpperCase();
+        navItem.innerHTML = `
+          <div class="user-menu">
+            <div class="user-avatar" onclick="toggleUserDropdown()">${initial}</div>
+            <div class="user-dropdown" id="user-dropdown">
+              <div style="padding:8px 20px;color:#c49b63;font-weight:600;">${name}</div>
+              <a href="javascript:void(0)" onclick="openDisplayNameModal()">Edit Display Name</a>
+              <button onclick="handleLogout()">Logout</button>
+            </div>
+          </div>
+        `;
+      } else {
+        navItem.innerHTML = `<a href="javascript:void(0)" class="nav-link auth-btn" id="login-btn" onclick="openModal('login-modal')">Login</a>`;
+      }
+    }
+
+    function toggleUserDropdown() {
+      document.getElementById('user-dropdown').classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('user-dropdown');
+      if (dropdown && !e.target.closest('.user-menu')) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    // ========== MODALS ==========
+    function openModal(id) {
+      document.getElementById(id).classList.add('show');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    function openDisplayNameModal() {
+      document.getElementById('display-name-input').value = currentUser?.displayName || '';
+      openModal('displayname-modal');
+    }
+
+    // ========== AUTH LOGIC ==========
+    function toggleAuthMode() {
+      isLoginMode = !isLoginMode;
+      document.getElementById('auth-title').textContent = isLoginMode ? 'Login' : 'Create Account';
+      document.getElementById('auth-subtitle').textContent = isLoginMode
+        ? 'Welcome back to Baterbonia Cafe'
+        : 'Join Baterbonia Cafe family';
+      document.getElementById('auth-submit-btn').textContent = isLoginMode ? 'Login' : 'Sign Up';
+      document.getElementById('auth-switch-text').textContent = isLoginMode
+        ? "Don't have an account?"
+        : 'Already have an account?';
+      document.getElementById('auth-switch-link').textContent = isLoginMode ? 'Sign up' : 'Login';
+      document.getElementById('auth-error').style.display = 'none';
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errorEl = document.getElementById('auth-error');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+          if (isLoginMode) {
+            await firebase.auth().signInWithEmailAndPassword(email, password);
+          } else {
+            await firebase.auth().createUserWithEmailAndPassword(email, password);
+          }
+          closeModal('login-modal');
+
+          // After login/signup → check if displayName is missing
+          const user = firebase.auth().currentUser;
+          if (user && !user.displayName) {
+            setTimeout(() => openModal('displayname-modal'), 400);
+          }
+        } else {
+          // Fallback demo mode (for testing without Firebase)
+          const demoUser = { email, displayName: null };
+          localStorage.setItem('baterboniaUser', JSON.stringify(demoUser));
+          currentUser = demoUser;
+          updateAuthUI(demoUser);
+          closeModal('login-modal');
+          openModal('displayname-modal');
+        }
+      } catch (err) {
+        errorEl.textContent = err.message || 'Authentication failed.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    async function saveDisplayName() {
+      const name = document.getElementById('display-name-input').value.trim();
+      if (!name) {
+        alert('Please enter a display name.');
+        return;
+      }
+
+      try {
+        if (typeof firebase !== 'undefined' && firebase.auth?.currentUser) {
+          await firebase.auth().currentUser.updateProfile({ displayName: name });
+          // Optional: also save to Firestore if you want
+        } else if (currentUser) {
+          currentUser.displayName = name;
+          localStorage.setItem('baterboniaUser', JSON.stringify(currentUser));
+        }
+        updateAuthUI(firebase?.auth?.currentUser || currentUser);
+        closeModal('displayname-modal');
+      } catch (err) {
+        alert('Failed to save name: ' + err.message);
+      }
+    }
+
+    async function handleLogout() {
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        await firebase.auth().signOut();
+      }
+      localStorage.removeItem('baterboniaUser');
+      currentUser = null;
+      updateAuthUI(null);
+    }
+
+    // ========== BOOK A TABLE (Formspree) ==========
+    // 1. Go to https://formspree.io → create free account
+    // 2. Create a new form → set recipient to markcyrilpenafiel@gmail.com
+    // 3. Copy the form endpoint (looks like https://formspree.io/f/xxxxxxx)
+    // 4. Replace the action below
+
+    document.getElementById('booking-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('booking-btn');
+      const successEl = document.getElementById('booking-success');
+      btn.value = 'Sending...';
+      btn.disabled = true;
+
+      const formData = new FormData(this);
+
+      try {
+        // ↓↓↓ REPLACE THIS URL with your Formspree form ID ↓↓↓
+        const response = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+          successEl.style.display = 'block';
+          this.reset();
+          setTimeout(() => successEl.style.display = 'none', 5000);
+        } else {
+          throw new Error('Failed to send');
+        }
+      } catch (err) {
+        alert('Sorry, something went wrong. Please email us directly at markcyrilpenafiel@gmail.com');
+      } finally {
+        btn.value = 'Appointment';
+        btn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
