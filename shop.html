@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Coffee - Free Bootstrap 4 Template by Colorlib</title>
+    <title>Shop - Coffee Blend</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     
@@ -27,6 +27,90 @@
     <link rel="stylesheet" href="css/flaticon.css">
     <link rel="stylesheet" href="css/icomoon.css">
     <link rel="stylesheet" href="css/style.css">
+
+    <style>
+      /* Enhanced product cards */
+      .menu-entry, .menu-wrap {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        margin-bottom: 30px;
+      }
+      .menu-entry:hover, .menu-wrap:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+      }
+      .menu-entry .img, .menu-wrap .menu-img {
+        height: 220px;
+        background-size: cover;
+        background-position: center;
+      }
+      .price span {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #c49b63;
+      }
+      .badge-special {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: #c49b63;
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        z-index: 2;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      .menu-entry, .menu-wrap {
+        position: relative;
+      }
+      .btn-primary.btn-outline-primary {
+        border-radius: 30px;
+        padding: 8px 22px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+      .btn-primary.btn-outline-primary:hover {
+        background: #c49b63;
+        border-color: #c49b63;
+        color: #fff;
+      }
+      .nav-pills .nav-link {
+        border-radius: 30px;
+        margin: 0 6px;
+        padding: 10px 22px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+      .nav-pills .nav-link.active {
+        background: #c49b63 !important;
+        color: #fff !important;
+      }
+      .section-intro {
+        max-width: 700px;
+        margin: 0 auto 40px;
+        text-align: center;
+      }
+      .section-intro p {
+        color: #666;
+        font-size: 1.05rem;
+      }
+      .promo-banner {
+        background: linear-gradient(135deg, #c49b63, #a67c4a);
+        color: #fff;
+        padding: 18px 25px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 40px;
+        font-weight: 500;
+      }
+      .promo-banner strong {
+        font-size: 1.2rem;
+      }
+    </style>
   </head>
   <body>
   	<nav class="navbar navbar-expand-lg navbar-dark ftco_navbar bg-dark ftco-navbar-light" id="ftco-navbar">
@@ -60,85 +144,139 @@
     <!-- END nav -->
 
     <section class="home-slider owl-carousel">
-
       <div class="slider-item" style="background-image: url(images/bg_3.jpg);" data-stellar-background-ratio="0.5">
       	<div class="overlay"></div>
         <div class="container">
           <div class="row slider-text justify-content-center align-items-center">
-
-            <div class="col-md-7 col-sm-12 text-center ftco-animate">
+            <div class="col-md-8 col-sm-12 text-center ftco-animate">
             	<h1 class="mb-3 mt-5 bread">Order Online</h1>
 	            <p class="breadcrumbs"><span class="mr-2"><a href="index.html">Home</a></span> <span>Shop</span></p>
+              <p class="mt-3" style="font-size:1.1rem; opacity:0.9;">Everything just ₱1.00 — limited time promo!</p>
             </div>
-
           </div>
         </div>
       </div>
     </section>
 
-
     <section class="ftco-menu mb-5 pb-5">
     	<div class="container">
+
+        <!-- Promo Banner -->
+        <div class="promo-banner ftco-animate">
+          <strong>🎉 Mega Promo:</strong> All items only <strong>₱1.00</strong> each! Free delivery on orders above ₱50. Limited time only.
+        </div>
+
     		<div class="row d-md-flex">
 	    		<div class="col-lg-12 ftco-animate p-md-5">
 		    		<div class="row">
 		          <div class="col-md-12 nav-link-wrap mb-5">
 		            <div class="nav ftco-animate nav-pills justify-content-center" id="v-pills-tab" role="tablist" aria-orientation="vertical">
 		            	<a class="nav-link active" id="v-pills-0-tab" data-toggle="pill" href="#v-pills-0" role="tab" aria-controls="v-pills-0" aria-selected="true">Coffee</a>
-
 		              <a class="nav-link" id="v-pills-1-tab" data-toggle="pill" href="#v-pills-1" role="tab" aria-controls="v-pills-1" aria-selected="false">Main Dish</a>
-
 		              <a class="nav-link" id="v-pills-2-tab" data-toggle="pill" href="#v-pills-2" role="tab" aria-controls="v-pills-2" aria-selected="false">Drinks</a>
-
 		              <a class="nav-link" id="v-pills-3-tab" data-toggle="pill" href="#v-pills-3" role="tab" aria-controls="v-pills-3" aria-selected="false">Desserts</a>
 		            </div>
 		          </div>
+
 		          <div class="col-md-12 d-flex align-items-center">
-		            
 		            <div class="tab-content ftco-animate" id="v-pills-tabContent">
 
+		              <!-- ==================== COFFEE ==================== -->
 		              <div class="tab-pane fade show active" id="v-pills-0" role="tabpanel" aria-labelledby="v-pills-0-tab">
+                    <div class="section-intro">
+                      <h3 class="mb-3">Our Signature Coffees</h3>
+                      <p>Handcrafted with premium beans, roasted to perfection. Every cup is just ₱1.00 during our special promo.</p>
+                    </div>
 		              	<div class="row">
 		              		<div class="col-md-3">
 						        		<div class="menu-entry">
-						    					<a href="#" class="img" style="background-image: url(images/menu-1.jpg);"></a>
+                          <span class="badge-special">Best Seller</span>
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-1.jpg);"></a>
 						    					<div class="text text-center pt-4">
-						    						<h3><a href="product-single.html">Coffee Capuccino</a></h3>
-						    						<p>A small river named Duden flows by their place and supplies</p>
-						    						<p class="price"><span>$5.90</span></p>
+						    						<h3><a href="product-single.html">Classic Cappuccino</a></h3>
+						    						<p>Rich espresso topped with silky steamed milk foam. Perfectly balanced.</p>
+						    						<p class="price"><span>₱1.00</span></p>
 						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 						    					</div>
 						    				</div>
 						        	</div>
 						        	<div class="col-md-3">
 						        		<div class="menu-entry">
-						    					<a href="#" class="img" style="background-image: url(images/menu-2.jpg);"></a>
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-2.jpg);"></a>
 						    					<div class="text text-center pt-4">
-						    						<h3><a href="product-single.html">Coffee Capuccino</a></h3>
-						    						<p>A small river named Duden flows by their place and supplies</p>
-						    						<p class="price"><span>$5.90</span></p>
+						    						<h3><a href="product-single.html">Caramel Macchiato</a></h3>
+						    						<p>Espresso with vanilla and caramel drizzle. Sweet and bold.</p>
+						    						<p class="price"><span>₱1.00</span></p>
 						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 						    					</div>
 						    				</div>
 						        	</div>
 						        	<div class="col-md-3">
 						        		<div class="menu-entry">
-						    					<a href="#" class="img" style="background-image: url(images/menu-3.jpg);"></a>
+                          <span class="badge-special">New</span>
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-3.jpg);"></a>
 						    					<div class="text text-center pt-4">
-						    						<h3><a href="product-single.html">Coffee Capuccino</a></h3>
-						    						<p>A small river named Duden flows by their place and supplies</p>
-						    						<p class="price"><span>$5.90</span></p>
+						    						<h3><a href="product-single.html">Spanish Latte</a></h3>
+						    						<p>Creamy condensed milk latte with a smooth espresso kick.</p>
+						    						<p class="price"><span>₱1.00</span></p>
 						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 						    					</div>
 						    				</div>
 						        	</div>
 						        	<div class="col-md-3">
 						        		<div class="menu-entry">
-						    					<a href="#" class="img" style="background-image: url(images/menu-4.jpg);"></a>
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-4.jpg);"></a>
 						    					<div class="text text-center pt-4">
-						    						<h3><a href="product-single.html">Coffee Capuccino</a></h3>
-						    						<p>A small river named Duden flows by their place and supplies</p>
-						    						<p class="price"><span>$5.90</span></p>
+						    						<h3><a href="product-single.html">Americano</a></h3>
+						    						<p>Bold espresso diluted with hot water. Clean and strong.</p>
+						    						<p class="price"><span>₱1.00</span></p>
+						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+						    					</div>
+						    				</div>
+						        	</div>
+
+                      <!-- Extra coffee items -->
+                      <div class="col-md-3">
+						        		<div class="menu-entry">
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-1.jpg);"></a>
+						    					<div class="text text-center pt-4">
+						    						<h3><a href="product-single.html">Matcha Latte</a></h3>
+						    						<p>Premium Japanese matcha with creamy steamed milk.</p>
+						    						<p class="price"><span>₱1.00</span></p>
+						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+						    					</div>
+						    				</div>
+						        	</div>
+                      <div class="col-md-3">
+						        		<div class="menu-entry">
+                          <span class="badge-special">Hot</span>
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-2.jpg);"></a>
+						    					<div class="text text-center pt-4">
+						    						<h3><a href="product-single.html">Hazelnut Mocha</a></h3>
+						    						<p>Chocolate, espresso and roasted hazelnut syrup.</p>
+						    						<p class="price"><span>₱1.00</span></p>
+						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+						    					</div>
+						    				</div>
+						        	</div>
+                      <div class="col-md-3">
+						        		<div class="menu-entry">
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-3.jpg);"></a>
+						    					<div class="text text-center pt-4">
+						    						<h3><a href="product-single.html">Iced Cold Brew</a></h3>
+						    						<p>Slow-steeped for 18 hours. Smooth, low acidity, bold flavor.</p>
+						    						<p class="price"><span>₱1.00</span></p>
+						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+						    					</div>
+						    				</div>
+						        	</div>
+                      <div class="col-md-3">
+						        		<div class="menu-entry">
+						    					<a href="product-single.html" class="img" style="background-image: url(images/menu-4.jpg);"></a>
+						    					<div class="text text-center pt-4">
+						    						<h3><a href="product-single.html">Vanilla Flat White</a></h3>
+						    						<p>Velvety microfoam with a touch of pure vanilla.</p>
+						    						<p class="price"><span>₱1.00</span></p>
 						    						<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 						    					</div>
 						    				</div>
@@ -146,218 +284,346 @@
 		              	</div>
 		              </div>
 
+		              <!-- ==================== MAIN DISH ==================== -->
 		              <div class="tab-pane fade" id="v-pills-1" role="tabpanel" aria-labelledby="v-pills-1-tab">
+                    <div class="section-intro">
+                      <h3 class="mb-3">Hearty Main Dishes</h3>
+                      <p>Satisfying meals crafted to pair perfectly with your coffee. All priced at ₱1.00!</p>
+                    </div>
 		                <div class="row">
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-1.jpg);"></a>
+                          <span class="badge-special">Popular</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-1.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Grilled Beef Steak</a></h3>
+		              					<p>Juicy grilled beef served with mashed potato and seasonal veggies.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-2.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-2.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Chicken Alfredo Pasta</a></h3>
+		              					<p>Creamy Alfredo sauce with grilled chicken and parmesan.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-3.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-3.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Club Sandwich</a></h3>
+		              					<p>Triple-decker with chicken, bacon, egg, lettuce and tomato.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-4.jpg);"></a>
+                          <span class="badge-special">Chef's Pick</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-4.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Beef Burger Deluxe</a></h3>
+		              					<p>Angus beef patty, cheddar, caramelized onion and special sauce.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-5.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-5.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Fish & Chips</a></h3>
+		              					<p>Crispy battered fish with golden fries and tartar sauce.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dish-6.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-6.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Grilled Beef</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Chicken Quesadilla</a></h3>
+		              					<p>Grilled tortilla filled with chicken, cheese and peppers.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+
+                      <!-- Extra main dishes -->
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-1.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Garlic Butter Shrimp</a></h3>
+		              					<p>Succulent shrimp in rich garlic butter sauce with rice.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-2.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Carbonara Pasta</a></h3>
+		              					<p>Classic creamy carbonara with bacon and egg yolk.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+                          <span class="badge-special">New</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dish-3.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Truffle Fries Platter</a></h3>
+		              					<p>Crispy fries tossed in truffle oil and parmesan cheese.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              	</div>
 		              </div>
 
+		              <!-- ==================== DRINKS ==================== -->
 		              <div class="tab-pane fade" id="v-pills-2" role="tabpanel" aria-labelledby="v-pills-2-tab">
+                    <div class="section-intro">
+                      <h3 class="mb-3">Refreshing Drinks</h3>
+                      <p>Cool down with our selection of juices, sodas and specialty beverages — all ₱1.00.</p>
+                    </div>
 		                <div class="row">
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-1.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-1.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Lemonade Juice</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Fresh Lemonade</a></h3>
+		              					<p>Freshly squeezed lemons with a hint of mint. Super refreshing.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-2.jpg);"></a>
+                          <span class="badge-special">Best Seller</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-2.jpg);"></a>
 		              				<div class="text">
 		              					<h3><a href="product-single.html">Pineapple Juice</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<p>100% pure pineapple juice. Naturally sweet and tropical.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-3.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-3.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Soda Drinks</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Classic Soda</a></h3>
+		              					<p>Chilled sparkling soda. Choose from cola, lemon or orange.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-4.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-4.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Lemonade Juice</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Strawberry Shake</a></h3>
+		              					<p>Creamy milkshake blended with real strawberries.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-5.jpg);"></a>
+                          <span class="badge-special">New</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-5.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Pineapple Juice</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Mango Smoothie</a></h3>
+		              					<p>Ripe mangoes blended into a thick, creamy smoothie.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/drink-6.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-6.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Soda Drinks</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Iced Tea</a></h3>
+		              					<p>House-brewed black tea served ice-cold with lemon.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+
+                      <!-- Extra drinks -->
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-1.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Watermelon Cooler</a></h3>
+		              					<p>Fresh watermelon juice with a splash of lime.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-2.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Chocolate Milkshake</a></h3>
+		              					<p>Rich chocolate ice cream blended to perfection.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/drink-3.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Calamansi Juice</a></h3>
+		              					<p>Local favorite — tangy calamansi with just the right sweetness.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              	</div>
 		              </div>
 
+		              <!-- ==================== DESSERTS ==================== -->
 		              <div class="tab-pane fade" id="v-pills-3" role="tabpanel" aria-labelledby="v-pills-3-tab">
+                    <div class="section-intro">
+                      <h3 class="mb-3">Sweet Desserts</h3>
+                      <p>End your meal on a high note. Every dessert is only ₱1.00 during this promo.</p>
+                    </div>
 		                <div class="row">
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-1.jpg);"></a>
+                          <span class="badge-special">Best Seller</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-1.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Honey Hot Cake</a></h3>
+		              					<p>Fluffy pancakes stacked high and drizzled with pure honey.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-2.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-2.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Chocolate Lava Cake</a></h3>
+		              					<p>Warm chocolate cake with a molten center. Served with ice cream.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-3.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-3.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Cheesecake Slice</a></h3>
+		              					<p>Creamy New York style cheesecake with berry compote.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-4.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-4.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Tiramisu</a></h3>
+		              					<p>Classic Italian dessert with espresso-soaked ladyfingers.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-5.jpg);"></a>
+                          <span class="badge-special">New</span>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-5.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Mango Float</a></h3>
+		              					<p>Layers of cream, graham and fresh ripe mangoes.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              		<div class="col-md-4 text-center">
 		              			<div class="menu-wrap">
-		              				<a href="#" class="menu-img img mb-4" style="background-image: url(images/dessert-6.jpg);"></a>
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-6.jpg);"></a>
 		              				<div class="text">
-		              					<h3><a href="product-single.html">Hot Cake Honey</a></h3>
-		              					<p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
+		              					<h3><a href="product-single.html">Churros with Dip</a></h3>
+		              					<p>Crispy churros dusted with cinnamon sugar + chocolate dip.</p>
 		              					<p class="price"><span>₱1.00</span></p>
-		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to cart</a></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+
+                      <!-- Extra desserts -->
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-1.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Banana Split</a></h3>
+		              					<p>Classic banana split with three scoops and toppings.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-2.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Brownies</a></h3>
+		              					<p>Fudgy chocolate brownies served warm with a scoop of vanilla.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
+		              				</div>
+		              			</div>
+		              		</div>
+                      <div class="col-md-4 text-center">
+		              			<div class="menu-wrap">
+		              				<a href="product-single.html" class="menu-img img mb-4" style="background-image: url(images/dessert-3.jpg);"></a>
+		              				<div class="text">
+		              					<h3><a href="product-single.html">Halo-Halo</a></h3>
+		              					<p>The ultimate Filipino dessert — shaved ice, leche flan, ube and more.</p>
+		              					<p class="price"><span>₱1.00</span></p>
+		              					<p><a href="cart.html" class="btn btn-primary btn-outline-primary">Add to Cart</a></p>
 		              				</div>
 		              			</div>
 		              		</div>
 		              	</div>
 		              </div>
+
 		            </div>
 		          </div>
 		        </div>
@@ -434,20 +700,17 @@
         </div>
         <div class="row">
           <div class="col-md-12 text-center">
-
-            <p><!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
+            <p>
   Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="icon-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
-  <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. --></p>
+  </p>
           </div>
         </div>
       </div>
     </footer>
     
   
-
   <!-- loader -->
   <div id="ftco-loader" class="show fullscreen"><svg class="circular" width="48px" height="48px"><circle class="path-bg" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke="#eeeeee"/><circle class="path" cx="24" cy="24" r="22" fill="none" stroke-width="4" stroke-miterlimit="10" stroke="#F96D00"/></svg></div>
-
 
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery-migrate-3.0.1.min.js"></script>
@@ -467,9 +730,10 @@
   <script src="js/google-map.js"></script>
   <script src="js/main.js"></script>
     
-    <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-config.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/shop-cart.js"></script>
-</body>
+    
+  </body>
 </html>
