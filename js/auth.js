@@ -1,8 +1,6 @@
 /**
- * Firebase Auth helpers + UI nav state for Rene Coffee
- * - Signup sends email verification
- * - Login can warn if email not verified
- * - Forgot password via Firebase
+ * Firebase Auth helpers + UI nav state for JAKAL'S Cafe / Rene Coffee
+ * Supports: login, signup, Google, popup modal, email verification
  */
 (function () {
   const AUTH_REDIRECT_KEY = 'coffeeBlendAuthRedirect';
@@ -41,6 +39,7 @@
   window.CoffeeAuth = {
     user: null,
     ready: false,
+    _authListeners: [],
 
     async init() {
       try {
@@ -50,6 +49,10 @@
             this.user = user;
             this.ready = true;
             this.updateNav();
+            // Notify index.html modal listeners
+            this._authListeners.forEach((cb) => {
+              try { cb(user); } catch (_) {}
+            });
             resolve(user);
           });
         });
@@ -57,8 +60,23 @@
         console.warn('[CoffeeAuth]', e.message);
         this.ready = true;
         this.updateNav();
+        this._authListeners.forEach((cb) => {
+          try { cb(null); } catch (_) {}
+        });
         return null;
       }
+    },
+
+    // Used by index.html popup modal
+    onAuthStateChanged(callback) {
+      if (typeof callback !== 'function') return () => {};
+      this._authListeners.push(callback);
+      if (this.ready) {
+        try { callback(this.user); } catch (_) {}
+      }
+      return () => {
+        this._authListeners = this._authListeners.filter((c) => c !== callback);
+      };
     },
 
     requireAuth(redirectTo) {
@@ -68,11 +86,6 @@
       return false;
     },
 
-    /**
-     * Require logged-in + verified email.
-     * Redirects to login or verify-email.html as needed.
-     * Returns true only when user is present and emailVerified.
-     */
     requireVerified(redirectTo) {
       const dest = redirectTo || window.location.href;
       if (!this.user) {
@@ -94,8 +107,9 @@
       if (displayName) {
         await cred.user.updateProfile({ displayName });
       }
-      // Always send verification email
-      await cred.user.sendEmailVerification();
+      try {
+        await cred.user.sendEmailVerification();
+      } catch (_) {}
       return cred.user;
     },
 
@@ -105,12 +119,49 @@
       return cred.user;
     },
 
-    /** Returns true if the current user has verified their email */
+    // Google / Gmail login (used by popup)
+    async loginWithGoogle() {
+      await loadFirebase();
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await firebase.auth().signInWithPopup(provider);
+      return result.user;
+    },
+
+    // Update display name (used by popup)
+    async updateDisplayName(name) {
+      await loadFirebase();
+      const user = firebase.auth().currentUser;
+      if (!user) throw new Error('No user signed in');
+      await user.updateProfile({ displayName: name });
+      this.user = firebase.auth().currentUser;
+      this.updateNav();
+      return this.user;
+    },
+
+    // Friendly error messages (used by popup)
+    friendlyError(err) {
+      if (!err) return 'Something went wrong.';
+      const code = err.code || '';
+      const map = {
+        'auth/user-not-found': 'No account found with that email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+        'auth/email-already-in-use': 'This email is already registered. Try logging in.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+        'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
+        'auth/cancelled-popup-request': 'Only one popup at a time is allowed.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+        'auth/too-many-requests': 'Too many attempts. Please try again later.',
+        'auth/invalid-credential': 'Invalid email or password.'
+      };
+      return map[code] || err.message || 'Authentication failed.';
+    },
+
     isEmailVerified() {
       return !!(this.user && this.user.emailVerified);
     },
 
-    /** Resend the verification email to the currently signed-in user */
     async resendVerification() {
       await loadFirebase();
       const user = firebase.auth().currentUser;
@@ -175,9 +226,7 @@
             });
           }
         } else {
-          el.innerHTML = `
-            <a href="login.html" class="nav-link">Login</a>
-          `;
+          el.innerHTML = `<a href="login.html" class="nav-link">Login</a>`;
         }
       });
 
