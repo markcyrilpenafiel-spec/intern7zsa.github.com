@@ -4,7 +4,6 @@
   <title>JAKAL'S Cafe - Best Coffee Experience</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
   <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Great+Vibes" rel="stylesheet">
@@ -20,7 +19,6 @@
   <link rel="stylesheet" href="css/flaticon.css">
   <link rel="stylesheet" href="css/icomoon.css">
   <link rel="stylesheet" href="css/style.css">
-
   <style>
     .auth-btn {
       background: #c49b63;
@@ -31,10 +29,20 @@
       font-weight: 500;
       margin-left: 12px;
       transition: all 0.3s ease;
+      white-space: nowrap;
     }
     .auth-btn:hover {
       background: #a67c4a;
       color: #fff !important;
+    }
+    #ftco-navbar .navbar-nav {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+    #auth-nav-item {
+      margin-left: 8px;
+      flex-shrink: 0;
     }
     .user-menu {
       display: flex;
@@ -66,6 +74,7 @@
       position: absolute;
       top: 45px;
       right: 0;
+      left: auto;
       background: #2a2a2a;
       border-radius: 12px;
       padding: 12px 0;
@@ -656,20 +665,15 @@
       <button class="modal-close" onclick="closeModal('login-modal')">×</button>
       <h3 id="auth-title">Login</h3>
       <p id="auth-subtitle">Welcome back to JAKAL'S Cafe</p>
-
       <div class="login-required-msg" id="login-required-msg">
         Please login or create an account first to continue.
       </div>
       <div class="auth-error" id="auth-error"></div>
-
-      <!-- Google / Gmail button -->
       <button type="button" class="btn-google" id="google-btn" onclick="handleGoogleLogin()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
         Continue with Google
       </button>
-
       <div class="auth-divider"><span>or use email</span></div>
-
       <div class="form-group" id="name-group" style="display:none;">
         <label>Full Name</label>
         <input type="text" id="auth-name" placeholder="Your name" autocomplete="name">
@@ -686,9 +690,7 @@
         <label>Confirm Password</label>
         <input type="password" id="auth-password2" placeholder="••••••••" autocomplete="new-password" minlength="6">
       </div>
-
       <button class="modal-btn" id="auth-submit-btn" onclick="handleAuth()">Login</button>
-
       <div class="auth-switch">
         <span id="auth-switch-text">Don't have an account?</span>
         <a href="javascript:void(0)" id="auth-switch-link" onclick="toggleAuthMode()">Sign up</a>
@@ -710,8 +712,6 @@
   </div>
 
   <!-- Scripts -->
- 
-
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery-migrate-3.0.1.min.js"></script>
   <script src="js/popper.min.js"></script>
@@ -727,338 +727,320 @@
   <script src="js/jquery.timepicker.min.js"></script>
   <script src="js/scrollax.min.js"></script>
   <script src="js/main.js"></script>
-
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/cart.js"></script>
 
- <script>
-  let isLoginMode = true;
-  let currentUser = null;
-  let pendingRedirect = null;
+  <script>
+    let isLoginMode = true;
+    let currentUser = null;
+    let pendingRedirect = null;
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Auth state
-    if (typeof CoffeeAuth !== 'undefined') {
-      CoffeeAuth.onAuthStateChanged(user => {
-        currentUser = user;
-        updateAuthUI(user);
-      });
-    }
-
-    // Cart count
-    try {
-      const cart = JSON.parse(localStorage.getItem('coffeeBlendCart') || '[]');
-      const countEl = document.getElementById('cart-count');
-      if (countEl) countEl.textContent = cart.length || 0;
-    } catch (_) {}
-
-    // ========== REQUIRE LOGIN ON ALL NAV LINKS ==========
-    // Home, Menu, Services, Blog, About, Shop, Contact, Cart, Checkout, etc.
-    document.querySelectorAll('a').forEach(link => {
-      const href = (link.getAttribute('href') || '').toLowerCase();
-
-      // Skip pure javascript and the login button itself
-      if (
-        href === 'javascript:void(0)' ||
-        href === '#' ||
-        link.id === 'login-btn' ||
-        link.closest('#auth-nav-item') ||
-        link.closest('#login-modal') ||
-        link.closest('#displayname-modal') ||
-        link.closest('.user-dropdown')
-      ) {
-        return;
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof CoffeeAuth !== 'undefined') {
+        CoffeeAuth.onAuthStateChanged(user => {
+          currentUser = user;
+          updateAuthUI(user);
+        });
       }
 
-      // Protect every real page link
-      link.addEventListener('click', function (e) {
-        if (!currentUser) {
-          e.preventDefault();
-          e.stopPropagation();
-          requireLogin(href && href !== '#' ? href : null);
-        }
-      });
-    });
+      try {
+        const cart = JSON.parse(localStorage.getItem('coffeeBlendCart') || '[]');
+        const countEl = document.getElementById('cart-count');
+        if (countEl) countEl.textContent = cart.length || 0;
+      } catch (_) {}
 
-    // ========== REQUIRE LOGIN ON ORDER NOW BUTTONS ==========
-    document.querySelectorAll('.order-now-btn').forEach(btn => {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        requireLogin('checkout.html');
-      });
-    });
-
-    // ========== REQUIRE LOGIN ON BOOK A TABLE ==========
-    const bookingForm = document.getElementById('booking-form');
-    if (bookingForm) {
-      bookingForm.addEventListener('submit', function (e) {
-        if (!currentUser) {
-          e.preventDefault();
-          requireLogin(null);
+      // Require login on ALL nav links
+      document.querySelectorAll('a').forEach(link => {
+        const href = (link.getAttribute('href') || '').toLowerCase();
+        if (
+          href === 'javascript:void(0)' ||
+          href === '#' ||
+          link.id === 'login-btn' ||
+          link.closest('#auth-nav-item') ||
+          link.closest('#login-modal') ||
+          link.closest('#displayname-modal') ||
+          link.closest('.user-dropdown')
+        ) {
           return;
         }
-        handleBookingSubmit(e);
+        link.addEventListener('click', function (e) {
+          if (!currentUser) {
+            e.preventDefault();
+            e.stopPropagation();
+            requireLogin(href && href !== '#' ? href : null);
+          }
+        });
       });
+
+      // Require login on Order Now
+      document.querySelectorAll('.order-now-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          requireLogin('checkout.html');
+        });
+      });
+
+      // Require login on Book a Table
+      const bookingForm = document.getElementById('booking-form');
+      if (bookingForm) {
+        bookingForm.addEventListener('submit', function (e) {
+          if (!currentUser) {
+            e.preventDefault();
+            requireLogin(null);
+            return;
+          }
+          handleBookingSubmit(e);
+        });
+      }
+    });
+
+    function requireLogin(redirectUrl = null) {
+      if (currentUser) {
+        if (redirectUrl) window.location.href = redirectUrl;
+        return;
+      }
+      pendingRedirect = redirectUrl;
+      document.getElementById('login-required-msg').style.display = 'block';
+      openModal('login-modal');
     }
-  });
 
-  function requireLogin(redirectUrl = null) {
-    if (currentUser) {
-      if (redirectUrl) window.location.href = redirectUrl;
-      return;
-    }
-    pendingRedirect = redirectUrl;
-    document.getElementById('login-required-msg').style.display = 'block';
-    openModal('login-modal');
-  }
-
-  function openLoginModal() {
-    document.getElementById('login-required-msg').style.display = 'none';
-    pendingRedirect = null;
-    openModal('login-modal');
-  }
-
-  function updateAuthUI(user) {
-    const navItem = document.getElementById('auth-nav-item');
-    if (!navItem) return;
-
-    if (user) {
-      const name = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
-      const initial = name.charAt(0).toUpperCase();
-      const photo = user.photoURL
-        ? `<img src="${user.photoURL}" alt="${name}">`
-        : initial;
-
-      navItem.innerHTML = `
-        <div class="user-menu">
-          <div class="user-avatar" onclick="toggleUserDropdown()">${photo}</div>
-          <div class="user-dropdown" id="user-dropdown">
-            <div style="padding:8px 20px;color:#c49b63;font-weight:600;">${name}</div>
-            <div style="padding:0 20px 8px;color:#888;font-size:12px;">${user.email || ''}</div>
-            <a href="javascript:void(0)" onclick="openDisplayNameModal()">Edit Display Name</a>
-            <button onclick="handleLogout()">Logout</button>
-          </div>
-        </div>
-      `;
-    } else {
-      navItem.innerHTML = `<a href="javascript:void(0)" class="nav-link auth-btn" id="login-btn" onclick="openLoginModal()">Login</a>`;
-    }
-  }
-
-  function toggleUserDropdown() {
-    const dropdown = document.getElementById('user-dropdown');
-    if (dropdown) dropdown.classList.toggle('show');
-  }
-
-  document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('user-dropdown');
-    if (dropdown && !e.target.closest('.user-menu')) {
-      dropdown.classList.remove('show');
-    }
-  });
-
-  function openModal(id) {
-    document.getElementById(id).classList.add('show');
-  }
-
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('show');
-    if (id === 'login-modal') {
+    function openLoginModal() {
       document.getElementById('login-required-msg').style.display = 'none';
+      pendingRedirect = null;
+      openModal('login-modal');
+    }
+
+    function updateAuthUI(user) {
+      const navItem = document.getElementById('auth-nav-item');
+      if (!navItem) return;
+      if (user) {
+        const name = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+        const initial = name.charAt(0).toUpperCase();
+        const photo = user.photoURL
+          ? `<img src="${user.photoURL}" alt="${name}">`
+          : initial;
+        navItem.innerHTML = `
+          <div class="user-menu">
+            <div class="user-avatar" onclick="toggleUserDropdown()">${photo}</div>
+            <div class="user-dropdown" id="user-dropdown">
+              <div style="padding:8px 20px;color:#c49b63;font-weight:600;">${name}</div>
+              <div style="padding:0 20px 8px;color:#888;font-size:12px;">${user.email || ''}</div>
+              <a href="javascript:void(0)" onclick="openDisplayNameModal()">Edit Display Name</a>
+              <button onclick="handleLogout()">Logout</button>
+            </div>
+          </div>
+        `;
+      } else {
+        navItem.innerHTML = `<a href="javascript:void(0)" class="nav-link auth-btn" id="login-btn" onclick="openLoginModal()">Login</a>`;
+      }
+    }
+
+    function toggleUserDropdown() {
+      const dropdown = document.getElementById('user-dropdown');
+      if (dropdown) dropdown.classList.toggle('show');
+    }
+
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('user-dropdown');
+      if (dropdown && !e.target.closest('.user-menu')) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('show');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+      if (id === 'login-modal') {
+        document.getElementById('login-required-msg').style.display = 'none';
+        document.getElementById('auth-error').style.display = 'none';
+      }
+    }
+
+    function openDisplayNameModal() {
+      document.getElementById('display-name-input').value = currentUser?.displayName || '';
+      openModal('displayname-modal');
+    }
+
+    function toggleAuthMode() {
+      isLoginMode = !isLoginMode;
+      document.getElementById('auth-title').textContent = isLoginMode ? 'Login' : 'Create Account';
+      document.getElementById('auth-subtitle').textContent = isLoginMode
+        ? 'Welcome back to JAKAL\'S Cafe'
+        : 'Join JAKAL\'S Cafe family';
+      document.getElementById('auth-submit-btn').textContent = isLoginMode ? 'Login' : 'Sign Up';
+      document.getElementById('auth-switch-text').textContent = isLoginMode
+        ? "Don't have an account?"
+        : 'Already have an account?';
+      document.getElementById('auth-switch-link').textContent = isLoginMode ? 'Sign up' : 'Login';
+      document.getElementById('name-group').style.display = isLoginMode ? 'none' : 'block';
+      document.getElementById('confirm-group').style.display = isLoginMode ? 'none' : 'block';
+      document.getElementById('auth-password').value = '';
+      document.getElementById('auth-password2').value = '';
       document.getElementById('auth-error').style.display = 'none';
     }
-  }
 
-  function openDisplayNameModal() {
-    document.getElementById('display-name-input').value = currentUser?.displayName || '';
-    openModal('displayname-modal');
-  }
+    async function handleAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const password2 = document.getElementById('auth-password2').value;
+      const name = document.getElementById('auth-name').value.trim();
+      const errorEl = document.getElementById('auth-error');
+      const btn = document.getElementById('auth-submit-btn');
+      errorEl.style.display = 'none';
 
-  function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    document.getElementById('auth-title').textContent = isLoginMode ? 'Login' : 'Create Account';
-    document.getElementById('auth-subtitle').textContent = isLoginMode
-      ? 'Welcome back to JAKAL\'S Cafe'
-      : 'Join JAKAL\'S Cafe family';
-    document.getElementById('auth-submit-btn').textContent = isLoginMode ? 'Login' : 'Sign Up';
-    document.getElementById('auth-switch-text').textContent = isLoginMode
-      ? "Don't have an account?"
-      : 'Already have an account?';
-    document.getElementById('auth-switch-link').textContent = isLoginMode ? 'Sign up' : 'Login';
-    document.getElementById('name-group').style.display = isLoginMode ? 'none' : 'block';
-    document.getElementById('confirm-group').style.display = isLoginMode ? 'none' : 'block';
-    document.getElementById('auth-password').value = '';
-    document.getElementById('auth-password2').value = '';
-    document.getElementById('auth-error').style.display = 'none';
-  }
+      if (!email || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!isLoginMode) {
+        if (!name) {
+          errorEl.textContent = 'Please enter your full name.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        if (!password2) {
+          errorEl.textContent = 'Please confirm your password.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        if (password !== password2) {
+          errorEl.textContent = 'Passwords do not match.';
+          errorEl.style.display = 'block';
+          return;
+        }
+      }
+      if (password.length < 6) {
+        errorEl.textContent = 'Password must be at least 6 characters.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorEl.textContent = 'Please enter a valid email address.';
+        errorEl.style.display = 'block';
+        return;
+      }
 
-  async function handleAuth() {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const password2 = document.getElementById('auth-password2').value;
-    const name = document.getElementById('auth-name').value.trim();
-    const errorEl = document.getElementById('auth-error');
-    const btn = document.getElementById('auth-submit-btn');
+      btn.disabled = true;
+      btn.textContent = isLoginMode ? 'Signing in...' : 'Creating account...';
 
-    errorEl.style.display = 'none';
-
-    // ========== VALIDATION ==========
-    if (!email || !password) {
-      errorEl.textContent = 'Please fill in all fields.';
-      errorEl.style.display = 'block';
-      return;
+      try {
+        let user;
+        if (isLoginMode) {
+          user = await CoffeeAuth.login(email, password);
+        } else {
+          user = await CoffeeAuth.signup(email, password, name);
+        }
+        currentUser = user;
+        updateAuthUI(user);
+        closeModal('login-modal');
+        if (!user.displayName) {
+          setTimeout(() => openModal('displayname-modal'), 300);
+        } else if (pendingRedirect) {
+          const url = pendingRedirect;
+          pendingRedirect = null;
+          window.location.href = url;
+        }
+      } catch (err) {
+        errorEl.textContent = CoffeeAuth.friendlyError
+          ? CoffeeAuth.friendlyError(err)
+          : (err.message || 'Authentication failed.');
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = isLoginMode ? 'Login' : 'Sign Up';
+      }
     }
-    if (!isLoginMode) {
+
+    async function handleGoogleLogin() {
+      const errorEl = document.getElementById('auth-error');
+      const btn = document.getElementById('google-btn');
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.innerHTML = '<span>Connecting...</span>';
+      try {
+        const user = await CoffeeAuth.loginWithGoogle();
+        currentUser = user;
+        updateAuthUI(user);
+        closeModal('login-modal');
+        if (pendingRedirect) {
+          const url = pendingRedirect;
+          pendingRedirect = null;
+          window.location.href = url;
+        }
+      } catch (err) {
+        errorEl.textContent = CoffeeAuth.friendlyError
+          ? CoffeeAuth.friendlyError(err)
+          : (err.message || 'Google sign-in failed.');
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+          Continue with Google
+        `;
+      }
+    }
+
+    async function saveDisplayName() {
+      const name = document.getElementById('display-name-input').value.trim();
       if (!name) {
-        errorEl.textContent = 'Please enter your full name.';
-        errorEl.style.display = 'block';
+        alert('Please enter a display name.');
         return;
       }
-      if (!password2) {
-        errorEl.textContent = 'Please confirm your password.';
-        errorEl.style.display = 'block';
-        return;
+      try {
+        const user = await CoffeeAuth.updateDisplayName(name);
+        currentUser = user;
+        updateAuthUI(user);
+        closeModal('displayname-modal');
+        if (pendingRedirect) {
+          const url = pendingRedirect;
+          pendingRedirect = null;
+          window.location.href = url;
+        }
+      } catch (err) {
+        alert('Failed to save name: ' + (err.message || err));
       }
-      if (password !== password2) {
-        errorEl.textContent = 'Passwords do not match.';
-        errorEl.style.display = 'block';
-        return;
+    }
+
+    async function handleLogout() {
+      await CoffeeAuth.logout();
+      currentUser = null;
+      updateAuthUI(null);
+    }
+
+    async function handleBookingSubmit(e) {
+      e.preventDefault();
+      const form = document.getElementById('booking-form');
+      const btn = document.getElementById('booking-btn');
+      const successEl = document.getElementById('booking-success');
+      btn.value = 'Sending...';
+      btn.disabled = true;
+      const formData = new FormData(form);
+      try {
+        const response = await fetch('https://formspree.io/f/xljeeeab', {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          successEl.style.display = 'block';
+          form.reset();
+          setTimeout(() => successEl.style.display = 'none', 5000);
+        } else {
+          throw new Error('Failed to send');
+        }
+      } catch (err) {
+        alert('Sorry, something went wrong. Please email us directly at markcyrilpenafiel@gmail.com');
+      } finally {
+        btn.value = 'Appointment';
+        btn.disabled = false;
       }
     }
-    if (password.length < 6) {
-      errorEl.textContent = 'Password must be at least 6 characters.';
-      errorEl.style.display = 'block';
-      return;
-    }
-    // Simple email format check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errorEl.textContent = 'Please enter a valid email address.';
-      errorEl.style.display = 'block';
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = isLoginMode ? 'Signing in...' : 'Creating account...';
-
-    try {
-      let user;
-      if (isLoginMode) {
-        user = await CoffeeAuth.login(email, password);
-      } else {
-        user = await CoffeeAuth.signup(email, password, name);
-      }
-      currentUser = user;
-      updateAuthUI(user);
-      closeModal('login-modal');
-
-      if (!user.displayName) {
-        setTimeout(() => openModal('displayname-modal'), 300);
-      } else if (pendingRedirect) {
-        const url = pendingRedirect;
-        pendingRedirect = null;
-        window.location.href = url;
-      }
-    } catch (err) {
-      errorEl.textContent = CoffeeAuth.friendlyError
-        ? CoffeeAuth.friendlyError(err)
-        : (err.message || 'Authentication failed.');
-      errorEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = isLoginMode ? 'Login' : 'Sign Up';
-    }
-  }
-
-  async function handleGoogleLogin() {
-    const errorEl = document.getElementById('auth-error');
-    const btn = document.getElementById('google-btn');
-    errorEl.style.display = 'none';
-    btn.disabled = true;
-    btn.innerHTML = '<span>Connecting...</span>';
-
-    try {
-      const user = await CoffeeAuth.loginWithGoogle();
-      currentUser = user;
-      updateAuthUI(user);
-      closeModal('login-modal');
-
-      if (pendingRedirect) {
-        const url = pendingRedirect;
-        pendingRedirect = null;
-        window.location.href = url;
-      }
-    } catch (err) {
-      errorEl.textContent = CoffeeAuth.friendlyError
-        ? CoffeeAuth.friendlyError(err)
-        : (err.message || 'Google sign-in failed.');
-      errorEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-        Continue with Google
-      `;
-    }
-  }
-
-  async function saveDisplayName() {
-    const name = document.getElementById('display-name-input').value.trim();
-    if (!name) {
-      alert('Please enter a display name.');
-      return;
-    }
-    try {
-      const user = await CoffeeAuth.updateDisplayName(name);
-      currentUser = user;
-      updateAuthUI(user);
-      closeModal('displayname-modal');
-      if (pendingRedirect) {
-        const url = pendingRedirect;
-        pendingRedirect = null;
-        window.location.href = url;
-      }
-    } catch (err) {
-      alert('Failed to save name: ' + (err.message || err));
-    }
-  }
-
-  async function handleLogout() {
-    await CoffeeAuth.logout();
-    currentUser = null;
-    updateAuthUI(null);
-  }
-
-  async function handleBookingSubmit(e) {
-    e.preventDefault();
-    const form = document.getElementById('booking-form');
-    const btn = document.getElementById('booking-btn');
-    const successEl = document.getElementById('booking-success');
-
-    btn.value = 'Sending...';
-    btn.disabled = true;
-
-    const formData = new FormData(form);
-    try {
-      const response = await fetch('https://formspree.io/f/xljeeeab', {
-        method: 'POST',
-        body: formData,
-        headers: { 'Accept': 'application/json' }
-      });
-      if (response.ok) {
-        successEl.style.display = 'block';
-        form.reset();
-        setTimeout(() => successEl.style.display = 'none', 5000);
-      } else {
-        throw new Error('Failed to send');
-      }
-    } catch (err) {
-      alert('Sorry, something went wrong. Please email us directly at markcyrilpenafiel@gmail.com');
-    } finally {
-      btn.value = 'Appointment';
-      btn.disabled = false;
-    }
-  }
-</script>
+  </script>
 </body>
 </html>
