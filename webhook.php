@@ -9,6 +9,7 @@
  * When payment succeeds, this script:
  *  1. Logs the order under orders/paid/
  *  2. Emails the shop owner (SMTP / mail)
+ *  3. Emails the customer a thank-you message
  *
  * Does NOT depend on the customer clicking "I Already Paid".
  */
@@ -24,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $raw = file_get_contents('php://input');
 $payload = json_decode($raw, true);
-
 if (!$payload || !isset($payload['data'])) {
     http_response_code(400);
     header('Content-Type: application/json');
@@ -86,11 +86,10 @@ if ($paymentIntentId && order_already_paid($paymentIntentId)) {
 }
 
 $pending = $paymentIntentId ? load_pending_order($paymentIntentId) : null;
-
 $amountCentavos = (int)($attrs['amount'] ?? ($pending['amount_centavos'] ?? 0));
 $amountDisplay  = $pending['amount_display'] ?? number_format($amountCentavos / 100, 2, '.', '');
-
 $billing = $attrs['billing'] ?? [];
+
 $order = mark_order_paid($paymentIntentId ?: ('unknown_' . time()), [
     'name'            => $pending['name'] ?? ($billing['name'] ?? ''),
     'email'           => $pending['email'] ?? ($billing['email'] ?? ''),
@@ -106,17 +105,21 @@ $order = mark_order_paid($paymentIntentId ?: ('unknown_' . time()), [
     'raw_event_id'    => $payload['data']['id'] ?? '',
 ]);
 
+// 1. Notify the shop owner
 $subject = 'New Rene Coffee sale – ₱' . $amountDisplay
     . (!empty($order['order_ref']) ? ' (' . $order['order_ref'] . ')' : '');
-
 $html = build_sale_email_html($order);
-$sent = send_sale_notification($OWNER_EMAIL, $subject, $html);
+$sentOwner = send_sale_notification($OWNER_EMAIL, $subject, $html);
+
+// 2. Send thank-you email to the customer
+$sentCustomer = send_customer_thankyou($order);
 
 http_response_code(200);
 header('Content-Type: application/json');
 echo json_encode([
-    'ok'         => true,
-    'email_sent' => (bool)$sent,
-    'order_ref'  => $order['order_ref'] ?? null,
-    'pi'         => $paymentIntentId,
+    'ok'              => true,
+    'email_sent'      => (bool)$sentOwner,
+    'customer_email'  => (bool)$sentCustomer,
+    'order_ref'       => $order['order_ref'] ?? null,
+    'pi'              => $paymentIntentId,
 ]);
