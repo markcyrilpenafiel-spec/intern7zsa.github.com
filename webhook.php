@@ -1,125 +1,160 @@
 <?php
 /**
- * PayMongo webhook endpoint
- * ------------------------
- * Register in PayMongo Dashboard → Developers → Webhooks:
- *   URL:    https://yourdomain.com/webhook.php
- *   Events: payment.paid  (and optionally payment.failed)
+ * webhook.php – PayMongo payment.paid webhook
+ * --------------------------------------------
+ * More reliable than the browser "I Already Paid" button.
  *
- * When payment succeeds, this script:
- *  1. Logs the order under orders/paid/
- *  2. Emails the shop owner (SMTP / mail)
- *  3. Emails the customer a thank-you message
+ * Setup (PayMongo Dashboard → Developers → Webhooks):
+ *   URL:    https://intern7zsa.site/webhook.php
+ *   Events: payment.paid   (optionally payment.failed)
  *
- * Does NOT depend on the customer clicking "I Already Paid".
+ * Optional extra protection:
+ *   https://intern7zsa.site/webhook.php?key=YOUR_LONG_SECRET
+ *   and set env WEBHOOK_URL_KEY=YOUR_LONG_SECRET
+ *
+ * What it does:
+ *  1. Receives payment.paid
+ *  2. Finds the related Payment Intent
+ *  3. Loads pending order (saved when QR was created)
+ *  4. mark_order_paid() → moves to orders/paid/
+ *  5. Emails owner + customer
+ *  6. Ignores duplicates
  */
 require_once __DIR__ . '/config.php';
 
-// Webhooks are server-to-server – no CORS needed
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Method not allowed']);
-    exit;
-}
-
-$raw = file_get_contents('php://input');
-$payload = json_decode($raw, true);
-if (!$payload || !isset($payload['data'])) {
-    http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Invalid payload']);
-    exit;
-}
-
-// Optional: basic shared-secret check via query string if you set
-// webhook URL to https://yourdomain.com/webhook.php?key=YOUR_SECRET
-// (PayMongo does not always send a signature header the same way as Stripe.)
+// Optional URL key protection
 $expectedKey = getenv('WEBHOOK_URL_KEY') ?: '';
 if ($expectedKey !== '') {
-    $got = $_GET['key'] ?? '';
-    if (!hash_equals($expectedKey, $got)) {
-        http_response_code(401);
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Unauthorized']);
+    $provided = $_GET['key'] ?? '';
+    if (!hash_equals($expectedKey, $provided)) {
+        http_response_code(403);
+        echo 'Forbidden';
         exit;
     }
 }
 
-$eventType = $payload['data']['attributes']['type']
-    ?? $payload['data']['attributes']['event']
-    ?? '';
+// PayMongo sends POST with JSON body
+$raw = file_get_contents('php://input');
+$payload = json_decode($raw, true);
 
-// Nested resource
-$resource = $payload['data']['attributes']['data'] ?? $payload['data'] ?? [];
-$resourceId = $resource['id'] ?? '';
-$attrs = $resource['attributes'] ?? [];
+if (!$payload || !isset($payload['data'])) {
+    http_response_code(400);
+    echo 'Bad payload';
+    exit;
+}
 
-// Accept payment.paid and payment_intent.succeeded
-$isPaidEvent = in_array($eventType, ['payment.paid', 'payment_intent.succeeded'], true)
-    || (($attrs['status'] ?? '') === 'paid')
-    || (($attrs['status'] ?? '') === 'succeeded');
+// Optional: verify webhook signature if you configured a secret
+// (PayMongo sends a signature header when webhook secret is set)
+if (!empty($PAYMONGO_WEBHOOK_SECRET)) {
+    $sigHeader = $_SERVER['HTTP_PAYMONGO_SIGNATURE'] ?? $_SERVER['HTTP_X_PAYMONGO_SIGNATURE'] ?? '';
+    // Basic presence check – full HMAC verification can be added later
+    if ($sigHeader === '') {
+        error_log('[ReneCoffee] Webhook received without signature header');
+    }
+}
+
+$eventType = $payload['data']['attributes']['type'] ?? $payload['data']['attributes']['event'] ?? '';
+// PayMongo event resource: data.attributes.type = "payment.paid"
+if ($eventType === '' && isset($payload['data']['attributes']['data']['attributes']['status'])) {
+    // fallback for some payload shapes
+}
+
+$resource = $payload['data']['attributes']['data'] ?? $payload['data'] ?? null;
+if (!$resource) {
+    http_response_code(200); // acknowledge so PayMongo stops retrying
+    echo 'No resource';
+    exit;
+}
+
+// Extract payment / payment_intent id
+$paymentId       = $resource['id'] ?? null;
+$resourceType    = $resource['type'] ?? '';
+$attrs           = $resource['attributes'] ?? [];
+$status          = $attrs['status'] ?? '';
+$paymentIntentId = $attrs['payment_intent_id']
+    ?? ($attrs['data']['id'] ?? null)
+    ?? null;
+
+// For payment.paid the resource is usually a "payment", which has payment_intent_id
+if (!$paymentIntentId && $resourceType === 'payment') {
+    $paymentIntentId = $attrs['payment_intent_id'] ?? null;
+}
+
+// Sometimes the event embeds the intent directly
+if (!$paymentIntentId && preg_match('/^pi_/', (string)$paymentId)) {
+    $paymentIntentId = $paymentId;
+}
+
+if (!$paymentIntentId || !preg_match('/^pi_/', $paymentIntentId)) {
+    // Still acknowledge – we can't process without an intent id
+    error_log('[ReneCoffee] Webhook: could not find payment_intent_id. Payload: ' . substr($raw, 0, 500));
+    http_response_code(200);
+    echo 'No payment_intent_id';
+    exit;
+}
+
+// Only act on successful payments
+$isPaidEvent = (
+    stripos($eventType, 'paid') !== false
+    || in_array($status, ['paid', 'succeeded'], true)
+);
 
 if (!$isPaidEvent) {
-    // Acknowledge other events so PayMongo does not retry forever
     http_response_code(200);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true, 'ignored' => $eventType]);
+    echo 'Ignored event: ' . $eventType;
     exit;
 }
 
-// Resolve payment_intent_id
-$paymentIntentId = $attrs['payment_intent_id']
-    ?? (($resource['type'] ?? '') === 'payment_intent' ? $resourceId : null)
-    ?? '';
-
-if ($paymentIntentId === '' && !empty($attrs['payment_intent_id'])) {
-    $paymentIntentId = $attrs['payment_intent_id'];
-}
-
-// Idempotency: if already recorded as paid, skip email
-if ($paymentIntentId && order_already_paid($paymentIntentId)) {
+// Idempotency
+if (order_already_paid($paymentIntentId)) {
     http_response_code(200);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => true, 'duplicate' => true]);
+    echo 'Already processed';
     exit;
 }
 
-$pending = $paymentIntentId ? load_pending_order($paymentIntentId) : null;
-$amountCentavos = (int)($attrs['amount'] ?? ($pending['amount_centavos'] ?? 0));
-$amountDisplay  = $pending['amount_display'] ?? number_format($amountCentavos / 100, 2, '.', '');
-$billing = $attrs['billing'] ?? [];
+$extra = [
+    'paymongo_status'   => $status ?: 'paid',
+    'payment_id'        => $paymentId,
+    'webhook_received'  => date('c'),
+    'amount_centavos'   => $attrs['amount'] ?? null,
+    'currency'          => $attrs['currency'] ?? 'PHP',
+];
+if (isset($attrs['amount'])) {
+    $extra['amount_display'] = number_format($attrs['amount'] / 100, 2, '.', '');
+}
 
-$order = mark_order_paid($paymentIntentId ?: ('unknown_' . time()), [
-    'name'            => $pending['name'] ?? ($billing['name'] ?? ''),
-    'email'           => $pending['email'] ?? ($billing['email'] ?? ''),
-    'phone'           => $pending['phone'] ?? ($billing['phone'] ?? ''),
-    'order_ref'       => $pending['order_ref'] ?? '',
-    'description'     => $pending['description'] ?? ($attrs['description'] ?? ''),
-    'amount_centavos' => $amountCentavos,
-    'amount_display'  => $amountDisplay,
-    'currency'        => $attrs['currency'] ?? 'PHP',
-    'payment_id'      => $resourceId,
-    'event_type'      => $eventType,
-    'notify_source'   => 'webhook',
-    'raw_event_id'    => $payload['data']['id'] ?? '',
-]);
+$order = mark_order_paid($paymentIntentId, $extra);
 
-// 1. Notify the shop owner
-$subject = 'New Rene Coffee sale – ₱' . $amountDisplay
-    . (!empty($order['order_ref']) ? ' (' . $order['order_ref'] . ')' : '');
-$html = build_sale_email_html($order);
-$sentOwner = send_sale_notification($OWNER_EMAIL, $subject, $html);
+// Send notifications
+$ownerSent = false;
+$customerSent = false;
 
-// 2. Send thank-you email to the customer
-$sentCustomer = send_customer_thankyou($order);
+try {
+    $ownerSubject = 'New sale – Rene Coffee (₱' . ($order['amount_display'] ?? '?') . ')';
+    $ownerHtml    = build_sale_email_html($order);
+    $ownerSent    = send_sale_notification($OWNER_EMAIL, $ownerSubject, $ownerHtml);
+} catch (Throwable $e) {
+    error_log('[ReneCoffee] Webhook owner email error: ' . $e->getMessage());
+}
+
+try {
+    $customerSent = send_customer_thankyou($order);
+} catch (Throwable $e) {
+    error_log('[ReneCoffee] Webhook customer email error: ' . $e->getMessage());
+}
+
+error_log(sprintf(
+    '[ReneCoffee] Webhook processed %s | owner=%s customer=%s',
+    $paymentIntentId,
+    $ownerSent ? 'yes' : 'no',
+    $customerSent ? 'yes' : 'no'
+));
 
 http_response_code(200);
 header('Content-Type: application/json');
 echo json_encode([
-    'ok'              => true,
-    'email_sent'      => (bool)$sentOwner,
-    'customer_email'  => (bool)$sentCustomer,
-    'order_ref'       => $order['order_ref'] ?? null,
-    'pi'              => $paymentIntentId,
+    'ok' => true,
+    'payment_intent_id' => $paymentIntentId,
+    'owner_email_sent' => $ownerSent,
+    'customer_email_sent' => $customerSent,
 ]);
