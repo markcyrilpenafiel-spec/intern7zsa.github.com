@@ -1,127 +1,190 @@
 <?php
 /**
- * Lightweight SMTP mailer (Gmail / any SMTP) – no Composer required.
- * Uses STARTTLS on port 587 by default.
+ * Minimal pure-PHP SMTP client (no Composer / PHPMailer needed).
+ * Supports STARTTLS (port 587) and SSL (port 465).
+ * Designed for Gmail App Passwords.
  */
-class SmtpMailer {
+class SmtpMailer
+{
     private $host;
     private $port;
     private $user;
     private $pass;
-    private $secure; // tls | ssl | ''
-    private $timeout;
+    private $secure; // 'tls' or 'ssl'
     private $lastError = '';
+    private $socket = null;
+    private $timeout = 30;
 
-    public function __construct($host, $port, $user, $pass, $secure = 'tls', $timeout = 20) {
-        $this->host = $host;
-        $this->port = (int)$port;
-        $this->user = $user;
-        $this->pass = $pass;
-        $this->secure = $secure;
-        $this->timeout = $timeout;
+    public function __construct($host, $port, $user, $pass, $secure = 'tls')
+    {
+        $this->host   = $host;
+        $this->port   = (int)$port;
+        $this->user   = $user;
+        $this->pass   = $pass;
+        $this->secure = strtolower($secure);
     }
 
-    public function getLastError() {
+    public function getLastError()
+    {
         return $this->lastError;
     }
 
-    public function send($fromEmail, $fromName, $toEmail, $subject, $htmlBody) {
+    /**
+     * Send an HTML email.
+     * @return bool true on success
+     */
+    public function send($fromEmail, $fromName, $toEmail, $subject, $htmlBody)
+    {
         $this->lastError = '';
-        $remote = ($this->secure === 'ssl' ? 'ssl://' : '') . $this->host;
-        $fp = @stream_socket_client(
-            $remote . ':' . $this->port,
+        try {
+            $this->connect();
+            $this->ehlo();
+
+            if ($this->secure === 'tls') {
+                $this->command('STARTTLS', 220);
+                if (!stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                    throw new Exception('STARTTLS failed');
+                }
+                $this->ehlo(); // must EHLO again after STARTTLS
+            }
+
+            $this->auth();
+            $this->command('MAIL FROM:<' . $fromEmail . '>', 250);
+            $this->command('RCPT TO:<' . $toEmail . '>', 250);
+            $this->command('DATA', 354);
+
+            $headers  = $this->buildHeaders($fromEmail, $fromName, $toEmail, $subject);
+            $message  = $headers . "\r\n" . $this->normalizeBody($htmlBody) . "\r\n.";
+            $this->write($message);
+            $resp = $this->read();
+            if (strpos($resp, '250') !== 0) {
+                throw new Exception('DATA rejected: ' . trim($resp));
+            }
+
+            $this->command('QUIT', 221);
+            $this->close();
+            return true;
+        } catch (Exception $e) {
+            $this->lastError = $e->getMessage();
+            $this->close();
+            return false;
+        }
+    }
+
+    private function connect()
+    {
+        $remote = ($this->secure === 'ssl' ? 'ssl://' : '') . $this->host . ':' . $this->port;
+        $this->socket = @stream_socket_client(
+            $remote,
             $errno,
             $errstr,
             $this->timeout,
-            STREAM_CLIENT_CONNECT
+            STREAM_CLIENT_CONNECT,
+            stream_context_create(['ssl' => [
+                'verify_peer'       => true,
+                'verify_peer_name'  => true,
+                'allow_self_signed' => false,
+            ]])
         );
-        if (!$fp) {
-            $this->lastError = "Connect failed: $errstr ($errno)";
-            return false;
+        if (!$this->socket) {
+            throw new Exception("Connect failed: $errstr ($errno)");
         }
-        stream_set_timeout($fp, $this->timeout);
-
-        if (!$this->expect($fp, 220)) return $this->fail($fp, 'Banner');
-        $this->cmd($fp, 'EHLO rene-coffee.local');
-        if (!$this->expect($fp, 250)) {
-            $this->cmd($fp, 'HELO rene-coffee.local');
-            if (!$this->expect($fp, 250)) return $this->fail($fp, 'EHLO/HELO');
+        stream_set_timeout($this->socket, $this->timeout);
+        $greeting = $this->read();
+        if (strpos($greeting, '220') !== 0) {
+            throw new Exception('Bad greeting: ' . trim($greeting));
         }
+    }
 
-        if ($this->secure === 'tls') {
-            $this->cmd($fp, 'STARTTLS');
-            if (!$this->expect($fp, 220)) return $this->fail($fp, 'STARTTLS');
-            if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                $this->lastError = 'TLS negotiation failed';
-                fclose($fp);
-                return false;
+    private function ehlo()
+    {
+        $host = gethostname() ?: 'localhost';
+        $this->command('EHLO ' . $host, 250);
+    }
+
+    private function auth()
+    {
+        $this->command('AUTH LOGIN', 334);
+        $this->command(base64_encode($this->user), 334);
+        $this->command(base64_encode($this->pass), 235);
+    }
+
+    private function command($cmd, $expectCode)
+    {
+        $this->write($cmd);
+        $resp = $this->read();
+        $code = (int)substr($resp, 0, 3);
+        if ($code !== (int)$expectCode) {
+            throw new Exception("Expected $expectCode, got: " . trim($resp));
+        }
+        return $resp;
+    }
+
+    private function write($data)
+    {
+        $data = rtrim($data, "\r\n") . "\r\n";
+        $written = fwrite($this->socket, $data);
+        if ($written === false) {
+            throw new Exception('Write failed');
+        }
+    }
+
+    private function read()
+    {
+        $data = '';
+        while ($line = fgets($this->socket, 515)) {
+            $data .= $line;
+            // Multi-line replies have a hyphen after the code (e.g. 250-)
+            if (isset($line[3]) && $line[3] === ' ') {
+                break;
             }
-            $this->cmd($fp, 'EHLO rene-coffee.local');
-            if (!$this->expect($fp, 250)) return $this->fail($fp, 'EHLO after TLS');
         }
+        return $data;
+    }
 
-        if ($this->user !== '') {
-            $this->cmd($fp, 'AUTH LOGIN');
-            if (!$this->expect($fp, 334)) return $this->fail($fp, 'AUTH LOGIN');
-            $this->cmd($fp, base64_encode($this->user));
-            if (!$this->expect($fp, 334)) return $this->fail($fp, 'AUTH user');
-            $this->cmd($fp, base64_encode($this->pass));
-            if (!$this->expect($fp, 235)) return $this->fail($fp, 'AUTH pass');
+    private function close()
+    {
+        if (is_resource($this->socket)) {
+            fclose($this->socket);
+            $this->socket = null;
         }
-
-        $this->cmd($fp, 'MAIL FROM:<' . $fromEmail . '>');
-        if (!$this->expect($fp, 250)) return $this->fail($fp, 'MAIL FROM');
-        $this->cmd($fp, 'RCPT TO:<' . $toEmail . '>');
-        if (!$this->expect($fp, 250)) return $this->fail($fp, 'RCPT TO');
-        $this->cmd($fp, 'DATA');
-        if (!$this->expect($fp, 354)) return $this->fail($fp, 'DATA');
-
-        $boundary = 'b_' . md5(uniqid((string)mt_rand(), true));
-        $headers = [];
-        $headers[] = 'From: ' . $this->encodeAddress($fromName, $fromEmail);
-        $headers[] = 'To: <' . $toEmail . '>';
-        $headers[] = 'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=';
-        $headers[] = 'MIME-Version: 1.0';
-        $headers[] = 'Content-Type: text/html; charset=UTF-8';
-        $headers[] = 'Content-Transfer-Encoding: base64';
-        $headers[] = 'Date: ' . date('r');
-        $headers[] = 'Message-ID: <' . uniqid('rene_', true) . '@rene-coffee.local>';
-
-        $data = implode("\r\n", $headers) . "\r\n\r\n" .
-            chunk_split(base64_encode($htmlBody)) . "\r\n.";
-        fwrite($fp, $data . "\r\n");
-        if (!$this->expect($fp, 250)) return $this->fail($fp, 'Message body');
-
-        $this->cmd($fp, 'QUIT');
-        fclose($fp);
-        return true;
     }
 
-    private function encodeAddress($name, $email) {
-        if ($name === '') return '<' . $email . '>';
-        return '=?UTF-8?B?' . base64_encode($name) . '?= <' . $email . '>';
+    private function buildHeaders($fromEmail, $fromName, $toEmail, $subject)
+    {
+        $fromNameEncoded = $this->encodeHeader($fromName);
+        $subjectEncoded  = $this->encodeHeader($subject);
+        $date = date('r');
+        $msgId = '<' . bin2hex(random_bytes(12)) . '@' . ($this->host ?: 'localhost') . '>';
+
+        $h = [];
+        $h[] = 'Date: ' . $date;
+        $h[] = 'From: ' . $fromNameEncoded . ' <' . $fromEmail . '>';
+        $h[] = 'To: <' . $toEmail . '>';
+        $h[] = 'Reply-To: ' . $fromEmail;
+        $h[] = 'Subject: ' . $subjectEncoded;
+        $h[] = 'Message-ID: ' . $msgId;
+        $h[] = 'MIME-Version: 1.0';
+        $h[] = 'Content-Type: text/html; charset=UTF-8';
+        $h[] = 'Content-Transfer-Encoding: 8bit';
+        $h[] = 'X-Mailer: ReneCoffee-SmtpMailer/1.0';
+        return implode("\r\n", $h);
     }
 
-    private function cmd($fp, $line) {
-        fwrite($fp, $line . "\r\n");
-    }
-
-    private function expect($fp, $code) {
-        $resp = '';
-        while ($line = fgets($fp, 515)) {
-            $resp .= $line;
-            if (isset($line[3]) && $line[3] === ' ') break;
-            if ($line === false) break;
+    private function encodeHeader($str)
+    {
+        if (preg_match('/[^\x20-\x7E]/', $str)) {
+            return '=?UTF-8?B?' . base64_encode($str) . '?=';
         }
-        $ok = (strpos($resp, (string)$code) === 0);
-        if (!$ok) $this->lastError = trim($resp);
-        return $ok;
+        return $str;
     }
 
-    private function fail($fp, $step) {
-        if ($this->lastError === '') $this->lastError = "Failed at $step";
-        else $this->lastError = "$step: " . $this->lastError;
-        fclose($fp);
-        return false;
+    private function normalizeBody($body)
+    {
+        // Dot-stuffing: lines starting with . must become ..
+        $body = str_replace(["\r\n", "\r"], "\n", $body);
+        $body = str_replace("\n", "\r\n", $body);
+        $body = preg_replace('/^\./m', '..', $body);
+        return $body;
     }
 }
