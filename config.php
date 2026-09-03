@@ -28,7 +28,7 @@ $SMTP_ENABLED = filter_var(getenv('SMTP_ENABLED') ?: 'true', FILTER_VALIDATE_BOO
 $SMTP_HOST    = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
 $SMTP_PORT    = (int)(getenv('SMTP_PORT') ?: 587);
 $SMTP_USER    = getenv('SMTP_USER') ?: 'markcyrilpenafiel@gmail.com';           // your full Gmail address
-$SMTP_PASS    = getenv('SMTP_PASS') ?: '@Deathtstalker';           // 16-char App Password (not normal password)
+$SMTP_PASS    = getenv('SMTP_PASS') ?: '@Deathtstalker26';           // 16-char App Password (not normal password)
 $SMTP_SECURE  = getenv('SMTP_SECURE') ?: 'tls';      // tls | ssl
 // Order log directory (JSON files; blocked by .htaccess)
 $ORDERS_DIR = __DIR__ . '/orders';
