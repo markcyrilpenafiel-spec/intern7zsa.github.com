@@ -97,16 +97,9 @@
       min-height: 48px;
       line-height: 1.5;
     }
-    .pending {
-      color: #f0ad4e;
-    }
-    .success {
-      color: #51cf66;
-      font-weight: 600;
-    }
-    .expired {
-      color: #ff6b6b;
-    }
+    .pending { color: #f0ad4e; }
+    .success { color: #51cf66; font-weight: 600; }
+    .expired { color: #ff6b6b; }
     .back-link {
       display: inline-block;
       margin-top: 15px;
@@ -114,9 +107,7 @@
       text-decoration: none;
       font-size: 14px;
     }
-    .back-link:hover {
-      text-decoration: underline;
-    }
+    .back-link:hover { text-decoration: underline; }
     .spinner {
       display: inline-block;
       width: 18px;
@@ -138,34 +129,24 @@
     <div class="confirmation-box">
       <h2>Scan to Pay</h2>
       <p class="subtitle">Unique QR Code generated for your order</p>
-
       <div class="order-ref" id="order-ref">ORDER-XXXXXX</div>
-
       <div class="qr-container">
         <img id="qr-image" src="" alt="PayMongo QR Ph">
       </div>
-
       <p class="scan-text">
         Scan using <strong>GCash, Maya, or any bank app</strong><br>
         that supports <strong>QR Ph</strong><br>
         <small>(QR expires in 30 minutes)</small>
       </p>
-
-      <div class="order-details" id="order-details">
-        <!-- filled by JS -->
-      </div>
-
-      <!-- Status message (no button) -->
+      <div class="order-details" id="order-details"></div>
       <div id="payment-status" class="pending">
         <span class="spinner"></span> Waiting for payment...
       </div>
-
       <a href="checkout.html" class="back-link">← Back to Checkout</a>
     </div>
   </div>
 
 <script>
-  // ========== LOAD ORDER DATA ==========
   const orderData = JSON.parse(sessionStorage.getItem('paymongoOrder') || '{}');
 
   if (!orderData.qr_image_url || !orderData.payment_intent_id) {
@@ -178,39 +159,30 @@
         </a>
       </div>`;
   } else {
-    // Fill QR + order reference
     document.getElementById('qr-image').src = orderData.qr_image_url;
     document.getElementById('order-ref').textContent =
-      orderData.order_ref || 'ORDER-' + Date.now();
+      orderData.order_ref || ('ORDER-' + Date.now());
 
-    // Build order details
     let itemsHtml = '';
     if (orderData.items && Array.isArray(orderData.items) && orderData.items.length) {
-      orderData.items.forEach(item => {
+      orderData.items.forEach(function (item) {
         const lineTotal = (Number(item.price) * Number(item.quantity)).toFixed(2);
-        itemsHtml += `
-          <p>
-            <span>${item.name} × ${item.quantity}</span>
-            <span>₱${lineTotal}</span>
-          </p>`;
+        itemsHtml +=
+          '<p><span>' + item.name + ' × ' + item.quantity + '</span><span>₱' + lineTotal + '</span></p>';
       });
     }
 
-    document.getElementById('order-details').innerHTML = `
-      <p><span>Customer</span><span>${orderData.name || '-'}</span></p>
-      <p><span>Email</span><span>${orderData.email || '-'}</span></p>
-      <p><span>Phone</span><span>${orderData.phone || '-'}</span></p>
-      ${itemsHtml}
-      <p class="total">
-        <span>Total Amount</span>
-        <span>₱${Number(orderData.amount || 0).toFixed(2)}</span>
-      </p>
-    `;
+    document.getElementById('order-details').innerHTML =
+      '<p><span>Customer</span><span>' + (orderData.name || '-') + '</span></p>' +
+      '<p><span>Email</span><span>' + (orderData.email || '-') + '</span></p>' +
+      '<p><span>Phone</span><span>' + (orderData.phone || '-') + '</span></p>' +
+      itemsHtml +
+      '<p class="total"><span>Total Amount</span><span>₱' +
+      Number(orderData.amount || 0).toFixed(2) + '</span></p>';
 
-    // ========== AUTO CHECK PAYMENT ==========
     const statusEl = document.getElementById('payment-status');
     let pollCount = 0;
-    const maxPolls = 72;          // 72 × 5s = 6 minutes
+    const maxPolls = 72;
     let pollingStopped = false;
 
     async function checkPaymentStatus() {
@@ -221,95 +193,73 @@
           'https://intern7zsa-github-com.vercel.app/api/check-payment?id=' +
           encodeURIComponent(orderData.payment_intent_id)
         );
-
         if (!res.ok) throw new Error('Network response was not ok');
 
         const data = await res.json();
 
-        // Payment succeeded
         if (data.paid === true || data.status === 'succeeded') {
           pollingStopped = true;
           statusEl.className = 'success';
+          statusEl.innerHTML = '✅ Payment received! Sending confirmation email...';
+
+          try {
+            await fetch('https://intern7zsa-github-com.vercel.app/api/notify-sale', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                payment_intent_id: orderData.payment_intent_id,
+                name: orderData.name,
+                email: orderData.email,
+                phone: orderData.phone,
+                amount: orderData.amount,
+                order_ref: orderData.order_ref,
+                quantity: orderData.quantity || (orderData.items ? orderData.items.length : 1)
+              })
+            });
+          } catch (e) {
+            console.error('Email notify failed:', e);
+          }
+
+          localStorage.removeItem('coffeeBlendCart');
+          sessionStorage.removeItem('paymongoOrder');
+
           statusEl.innerHTML = '✅ Payment received! Redirecting...';
+          setTimeout(function () {
+            window.location.href = 'success.html';
+          }, 1200);
 
-          // Payment succeeded
-if (data.paid === true || data.status === 'succeeded') {
-  pollingStopped = true;
-  statusEl.className = 'success';
-  statusEl.innerHTML = '✅ Payment received! Sending confirmation email...';
+          return true;
+        }
 
-  // Send owner + customer emails via Vercel
-  try {
-    await fetch('https://intern7zsa-github-com.vercel.app/api/notify-sale', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        payment_intent_id: orderData.payment_intent_id,
-        name: orderData.name,
-        email: orderData.email,
-        phone: orderData.phone,
-        amount: orderData.amount,
-        order_ref: orderData.order_ref,
-        quantity: orderData.quantity || (orderData.items ? orderData.items.length : 1)
-      })
-    });
-  } catch (e) {
-    console.error('Email notify failed:', e);
-  }
-
-  // Clear cart + order data
-  localStorage.removeItem('coffeeBlendCart');
-  sessionStorage.removeItem('paymongoOrder');
-
-  statusEl.innerHTML = '✅ Payment received! Redirecting...';
-
-  // Redirect to success page
-  setTimeout(() => {
-    window.location.href = 'success.html';
-  }, 1200);
-
-  return true;
-}
-
-        // Still waiting
         statusEl.className = 'pending';
-        statusEl.innerHTML = `
-          <span class="spinner"></span>
-          Waiting for payment...<br>
-          <small>Scan the QR with GCash / Maya</small>
-        `;
+        statusEl.innerHTML =
+          '<span class="spinner"></span> Waiting for payment...<br>' +
+          '<small>Scan the QR with GCash / Maya</small>';
         return false;
-
       } catch (err) {
         console.error('Payment check error:', err);
         statusEl.className = 'pending';
-        statusEl.innerHTML = `
-          <span class="spinner"></span>
-          Checking payment status...
-        `;
+        statusEl.innerHTML =
+          '<span class="spinner"></span> Checking payment status...';
         return false;
       }
     }
 
-    // Start checking after 2 seconds, then every 5 seconds
-    setTimeout(async () => {
+    setTimeout(async function () {
       const paid = await checkPaymentStatus();
       if (paid) return;
 
-      const interval = setInterval(async () => {
+      const interval = setInterval(async function () {
         pollCount++;
-        const paid = await checkPaymentStatus();
-
-        if (paid || pollCount >= maxPolls) {
+        const paidNow = await checkPaymentStatus();
+        if (paidNow || pollCount >= maxPolls) {
           clearInterval(interval);
           pollingStopped = true;
-
-          if (!paid) {
+          if (!paidNow) {
             statusEl.className = 'expired';
-            statusEl.innerHTML = `
-              QR expired or payment not received.<br>
-              <a href="checkout.html" style="color:#c49b63;">Try again</a>
-            `;
+            statusEl.innerHTML =
+              'QR expired or payment not received.<br>' +
+              '<a href="checkout.html" style="color:#c49b63;">Try again</a>';
           }
         }
       }, 5000);
