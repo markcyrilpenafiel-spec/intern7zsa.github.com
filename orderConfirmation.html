@@ -232,17 +232,44 @@
           statusEl.className = 'success';
           statusEl.innerHTML = '✅ Payment received! Redirecting...';
 
-          // Clear cart + order data
-          localStorage.removeItem('coffeeBlendCart');
-          sessionStorage.removeItem('paymongoOrder');
+          // Payment succeeded
+if (data.paid === true || data.status === 'succeeded') {
+  pollingStopped = true;
+  statusEl.className = 'success';
+  statusEl.innerHTML = '✅ Payment received! Sending confirmation email...';
 
-          // Redirect to success page
-          setTimeout(() => {
-            window.location.href = 'success.html';
-          }, 1200);
+  // Send owner + customer emails via Vercel
+  try {
+    await fetch('https://intern7zsa-github-com.vercel.app/api/notify-sale', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        payment_intent_id: orderData.payment_intent_id,
+        name: orderData.name,
+        email: orderData.email,
+        phone: orderData.phone,
+        amount: orderData.amount,
+        order_ref: orderData.order_ref,
+        quantity: orderData.quantity || (orderData.items ? orderData.items.length : 1)
+      })
+    });
+  } catch (e) {
+    console.error('Email notify failed:', e);
+  }
 
-          return true;
-        }
+  // Clear cart + order data
+  localStorage.removeItem('coffeeBlendCart');
+  sessionStorage.removeItem('paymongoOrder');
+
+  statusEl.innerHTML = '✅ Payment received! Redirecting...';
+
+  // Redirect to success page
+  setTimeout(() => {
+    window.location.href = 'success.html';
+  }, 1200);
+
+  return true;
+}
 
         // Still waiting
         statusEl.className = 'pending';
