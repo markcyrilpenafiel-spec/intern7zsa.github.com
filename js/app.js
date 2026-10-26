@@ -468,6 +468,15 @@ function validateSignupStep1() {
   if (!name) {
     setFieldError('signup-name', 'Please enter your full name.');
     ok = false;
+  } else if (/^\d+$/.test(name.replace(/\s/g, ''))) {
+    setFieldError('signup-name', 'Full name cannot be only numbers. Please enter your real name.');
+    ok = false;
+  } else if (!/^[a-zA-ZÀ-ÿñÑ\s.'\-]+$/.test(name)) {
+    setFieldError('signup-name', 'Full name can only contain letters, spaces, hyphens, and apostrophes.');
+    ok = false;
+  } else if (name.trim().split(/\s+/).length < 2) {
+    setFieldError('signup-name', 'Please enter your full name (first and last name).');
+    ok = false;
   }
   if (!email) {
     setFieldError('signup-email', 'Please enter your email address.');
