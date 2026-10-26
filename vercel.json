@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "functions": {
+    "api/*.php": {
+      "runtime": "vercel-php@0.9.0",
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    { "src": "/", "dest": "/api/index.php" },
+    { "src": "/index.php", "dest": "/api/index.php" },
+    { "src": "/api.php", "dest": "/api/api.php" },
+    { "src": "/dashboard.php", "dest": "/api/dashboard.php" },
+    { "src": "/dashboard-admin.php", "dest": "/api/dashboard-admin.php" },
+    { "src": "/dashboard-staff.php", "dest": "/api/dashboard-staff.php" },
+    { "src": "/dashboard-customer.php", "dest": "/api/dashboard-customer.php" },
+    { "src": "/(.*\\.php)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
