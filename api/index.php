@@ -54,10 +54,6 @@ if (isLoggedIn()) {
                   <input type="checkbox" id="remember-me">
                   <label for="remember-me">Remember me</label>
                 </div>
-                <div class="checkbox-group" id="login-policies-group">
-                  <input type="checkbox" id="accept-policies">
-                  <label for="accept-policies">I accept the <a href="#" onclick="openPolicies(event)">Terms of Service & Privacy Policy</a></label>
-                </div>
                 <div class="field-error" id="err-login-policies"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 <button type="submit" class="btn btn-primary" id="login-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
               </div>
