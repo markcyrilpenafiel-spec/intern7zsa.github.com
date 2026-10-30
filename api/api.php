@@ -329,21 +329,44 @@ switch ($action) {
 
     case 'forgot':
         $email = strtolower(trim($_POST['email'] ?? ''));
-        if (!$email) jsonResponse(['ok' => false, 'message' => 'Email is required.'], 400);
-        $user = findUserByEmail($email);
-        // Always same message (no email enumeration)
-        if ($user) {
-            $tempPass = 'Temp@' . random_int(100000, 999999);
-            updateUser((int)$user['id'], [
-                'password' => password_hash($tempPass, PASSWORD_DEFAULT),
-                'reset_token' => bin2hex(random_bytes(16)),
-                'reset_expires' => time() + 3600
-            ]);
-            sendPasswordResetEmail($user['email'], $user['name'], $tempPass);
+        if (!$email) {
+            jsonResponse(['ok' => false, 'message' => 'Please enter your email address.'], 400);
         }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['ok' => false, 'message' => 'Please enter a valid email address.'], 400);
+        }
+
+        $user = findUserByEmail($email);
+        if (!$user) {
+            // Same generic wording so we do not reveal whether the email is registered
+            jsonResponse([
+                'ok' => true,
+                'sent' => false,
+                'message' => 'If an account exists for that email, a temporary password has been sent. Check your inbox and spam folder. If you never created an account, sign up first.'
+            ]);
+        }
+
+        $tempPass = 'Temp@' . random_int(100000, 999999);
+        updateUser((int)$user['id'], [
+            'password' => password_hash($tempPass, PASSWORD_DEFAULT),
+            'reset_token' => bin2hex(random_bytes(16)),
+            'reset_expires' => time() + 3600
+        ]);
+
+        $sent = sendPasswordResetEmail($user['email'], $user['name'], $tempPass);
+        if (!$sent) {
+            // Password was still updated — tell the user email failed so they are not stuck
+            jsonResponse([
+                'ok' => false,
+                'sent' => false,
+                'message' => 'Your password was reset on the server, but the email could not be sent. Check SMTP settings in config, or try again in a few minutes. Also check spam/junk.'
+            ], 500);
+        }
+
         jsonResponse([
             'ok' => true,
-            'message' => 'If an account exists for that email, a temporary password has been sent. Check your inbox (and spam folder).'
+            'sent' => true,
+            'message' => 'A temporary password has been sent to your email. Check your inbox and spam folder, then sign in with it and change your password.'
         ]);
         break;
 
