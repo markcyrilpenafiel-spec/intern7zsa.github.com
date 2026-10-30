@@ -311,13 +311,22 @@ document.getElementById('policies-modal')?.addEventListener('click', function (e
 async function handleLogin(e) {
   e.preventDefault();
   clearAllLoginFieldErrors();
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const remember = document.getElementById('remember-me').checked ? '1' : '';
-  const policies = document.getElementById('accept-policies').checked || policiesAccepted;
+  const alertEl = document.getElementById('login-alert');
+  if (alertEl) alertEl.innerHTML = '';
+
+  const emailEl = document.getElementById('login-email');
+  const passwordEl = document.getElementById('login-password');
+  const rememberEl = document.getElementById('remember-me');
+  const policiesEl = document.getElementById('accept-policies');
   const btn = document.getElementById('login-btn');
+
+  const email = emailEl ? emailEl.value.trim() : '';
+  const password = passwordEl ? passwordEl.value : '';
+  const remember = rememberEl && rememberEl.checked ? '1' : '';
+  const policies = (policiesEl && policiesEl.checked) || policiesAccepted;
   let ok = true;
 
+  // Same style of red field errors as Create Account
   if (!email) {
     setFieldError('login-email', 'Please enter your email address.');
     ok = false;
@@ -335,8 +344,10 @@ async function handleLogin(e) {
   }
   if (!ok) return false;
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Signing in...';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in...';
+  }
 
   try {
     const data = await api('login', { email, password, remember, policies: policies ? '1' : '' });
@@ -345,31 +356,47 @@ async function handleLogin(e) {
       setTimeout(() => { window.location.href = data.redirect || 'dashboard.php'; }, 600);
     } else if (data.need_verify) {
       pendingVerifyEmail = data.email;
-      document.getElementById('verify-email-display').textContent = data.email;
+      const disp = document.getElementById('verify-email-display');
+      if (disp) disp.textContent = data.email;
       showPanel('verify');
       showAlert('verify-alert', 'warning', data.message);
     } else {
-      showAlert('login-alert', 'error', data.message || 'Login failed.');
+      // Show red boxes under fields for failed login (same UX as signup)
+      const msg = data.message || 'Login failed.';
+      showAlert('login-alert', 'error', msg);
+      if (/email|password|invalid|credentials/i.test(msg)) {
+        setFieldError('login-email', 'Check your email address.');
+        setFieldError('login-password', msg);
+      }
+      if (/polic/i.test(msg)) {
+        setGroupError('login-policies-group', 'err-login-policies', msg);
+      }
     }
   } catch (err) {
     showAlert('login-alert', 'error', 'Network error. Please try again.');
   }
 
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+  }
   return false;
 }
 
 /* ---------- Face ID Login ---------- */
 async function startLoginFace() {
-  const email = document.getElementById('login-email').value.trim();
-  const policies = document.getElementById('accept-policies').checked || policiesAccepted;
+  const emailEl = document.getElementById('login-email');
+  const policiesEl = document.getElementById('accept-policies');
+  const email = emailEl ? emailEl.value.trim() : '';
+  const policies = (policiesEl && policiesEl.checked) || policiesAccepted;
 
   if (!email) {
+    setFieldError('login-email', 'Enter your email first, then use Face ID.');
     showAlert('login-alert', 'error', 'Enter your email first, then use Face ID.');
     return;
   }
   if (!policies) {
+    setGroupError('login-policies-group', 'err-login-policies', 'Accept the policies before using Face ID.');
     showAlert('login-alert', 'error', 'Accept the policies before using Face ID.');
     return;
   }
@@ -1458,26 +1485,48 @@ async function resendCode() {
 async function handleForgot(e) {
   e.preventDefault();
   clearFieldError('forgot-email');
-  const email = document.getElementById('forgot-email').value.trim();
+  const alertEl = document.getElementById('forgot-alert');
+  if (alertEl) alertEl.innerHTML = '';
+
+  const emailEl = document.getElementById('forgot-email');
+  const email = emailEl ? emailEl.value.trim() : '';
+  const btn = document.getElementById('forgot-btn');
+
   if (!email) {
     setFieldError('forgot-email', 'Please enter your email address.');
+    showAlert('forgot-alert', 'error', 'Please enter your email address.');
     return false;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     setFieldError('forgot-email', 'Please enter a valid email address.');
+    showAlert('forgot-alert', 'error', 'Please enter a valid email address.');
     return false;
   }
-  const btn = document.getElementById('forgot-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Sending...';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Sending...';
+  }
+
   try {
     const data = await api('forgot', { email });
-    showAlert('forgot-alert', 'success', data.message);
+    if (data && data.ok) {
+      // Success notice appears under the button (forgot-alert is placed below the form)
+      showAlert('forgot-alert', 'success', data.message ||
+        'If an account exists for that email, a temporary password has been sent. Check your inbox and spam folder.');
+    } else {
+      const msg = (data && data.message) || 'Could not send temporary password. Please try again.';
+      showAlert('forgot-alert', 'error', msg);
+      setFieldError('forgot-email', msg);
+    }
   } catch (err) {
-    showAlert('forgot-alert', 'error', 'Network error.');
+    showAlert('forgot-alert', 'error', 'Network error. Please check your connection and try again.');
   }
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Temporary Password';
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Temporary Password';
+  }
   return false;
 }
 
