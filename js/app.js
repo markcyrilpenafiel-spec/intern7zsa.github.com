@@ -39,6 +39,7 @@ function showPanel(name) {
     n.classList.toggle('active', n.dataset.panel === name);
   });
   if (name === 'signup') nextSignupStep(1);
+  if (name === 'forgot') resetForgotPanel();
   if (name !== 'login') stopLoginFace();
   ['login', 'signup', 'forgot', 'verify'].forEach(id => {
     const el = document.getElementById(id + '-alert');
@@ -149,13 +150,28 @@ async function api(action, data = {}) {
  * Returns { ok, reason, videoCount }
  * ok: true if a video input appears available
  */
+/** Standard no-camera notice (same idea as system camera error screens) */
+const NO_CAMERA_TITLE = "We can't find your camera";
+const NO_CAMERA_BODY =
+  "Make sure the camera is connected and turned on, that anti-virus software isn't blocking it, and that the camera drivers are up to date. A working camera is required to register.";
+const NO_CAMERA_CODE = '0xA00F4244&lt;NoCamerasAreAttached&gt;';
+const NO_CAMERA_HTML =
+  `<div class="no-camera-notice">
+    <div class="no-camera-icon"><i class="fas fa-video-slash"></i></div>
+    <h3>${NO_CAMERA_TITLE}</h3>
+    <p>${NO_CAMERA_BODY}</p>
+    <p class="no-camera-code">Here's the error code:<br><code>${NO_CAMERA_CODE}</code></p>
+  </div>`;
+const NO_CAMERA_ALERT =
+  "We can't find your camera. Make sure the camera is connected and turned on, that anti-virus software isn't blocking it, and that the camera drivers are up to date. A working camera is required to register. Error code: 0xA00F4244&lt;NoCamerasAreAttached&gt;";
+
 async function checkCameraAvailable() {
   // Camera APIs require a secure context (HTTPS or localhost)
   if (typeof window !== 'undefined' && !window.isSecureContext &&
       location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     return {
       ok: false,
-      reason: 'Camera requires a secure connection (HTTPS). Open this site over HTTPS to register.',
+      reason: "We can't find your camera. Camera access needs a secure connection (HTTPS). Open this site over HTTPS to register.",
       videoCount: 0
     };
   }
@@ -163,7 +179,7 @@ async function checkCameraAvailable() {
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
     return {
       ok: false,
-      reason: 'This device or browser does not support camera access. A camera is required to register. Please use a computer or phone with a working camera, or try another browser (Chrome, Edge, Firefox, or Safari).',
+      reason: NO_CAMERA_ALERT,
       videoCount: 0
     };
   }
@@ -175,7 +191,7 @@ async function checkCameraAvailable() {
       if (videoInputs.length === 0) {
         return {
           ok: false,
-          reason: 'No camera detected on this device. You cannot register without a camera. Please use a PC or phone that has a working camera, then try again.',
+          reason: NO_CAMERA_ALERT,
           videoCount: 0
         };
       }
@@ -190,10 +206,7 @@ async function checkCameraAvailable() {
 }
 
 function applyNoCameraUI(context) {
-  const msg =
-    'No camera detected. You cannot create an account without a camera. Please use a device with a working camera (PC webcam or phone camera) and allow camera permission when asked.';
-
-  showAlert('signup-alert', 'error', msg);
+  showAlert('signup-alert', 'error', NO_CAMERA_ALERT);
 
   if (context === 'face' || context === 'signup') {
     const startBtn = document.getElementById('start-camera-btn');
@@ -201,7 +214,7 @@ function applyNoCameraUI(context) {
     const submitBtn = document.getElementById('signup-submit-btn');
     if (startBtn) {
       startBtn.disabled = true;
-      startBtn.innerHTML = '<i class="fas fa-video-slash"></i> No camera detected';
+      startBtn.innerHTML = '<i class="fas fa-video-slash"></i> We can\'t find your camera';
     }
     if (captureBtn) {
       captureBtn.disabled = true;
@@ -210,9 +223,9 @@ function applyNoCameraUI(context) {
     if (submitBtn) submitBtn.disabled = true;
     const status = document.getElementById('face-status');
     if (status) {
-      status.style.display = 'inline-flex';
-      status.className = 'face-status error';
-      status.innerHTML = '<i class="fas fa-video-slash"></i> Cannot register — no camera detected';
+      status.style.display = 'block';
+      status.className = 'face-status error no-camera-status';
+      status.innerHTML = NO_CAMERA_HTML;
     }
   }
 
@@ -220,7 +233,7 @@ function applyNoCameraUI(context) {
     const startCam = document.getElementById('id-start-cam-btn');
     if (startCam) {
       startCam.disabled = true;
-      startCam.innerHTML = '<i class="fas fa-video-slash"></i> No camera';
+      startCam.innerHTML = '<i class="fas fa-video-slash"></i> We can\'t find your camera';
     }
   }
 }
@@ -635,9 +648,7 @@ async function goSignupStep3() {
   // Face verification requires a camera — block registration if none is available
   const cam = await checkCameraAvailable();
   if (!cam.ok) {
-    showAlert('signup-alert', 'error',
-      cam.reason ||
-      'No camera detected. You cannot register without a camera. Please use a device with a working camera.');
+    showAlert('signup-alert', 'error', cam.reason || NO_CAMERA_ALERT);
     return;
   }
 
@@ -695,12 +706,20 @@ function switchIdMethod(method) {
 /**
  * Automatically detect which government ID type the OCR text most likely belongs to.
  * Returns { type, confidence } where confidence is 0–100.
+ * Strong type-specific keywords beat generic "Republic of the Philippines" text
+ * (which appears on almost every PH ID, including Driver's License).
  */
 function detectIdTypeFromText(text) {
   if (!text || text.length < 8) {
     return { type: null, confidence: 0 };
   }
-  const t = text.toUpperCase().replace(/\s+/g, ' ');
+  // Normalize OCR noise: common misreads for LICENSE / DRIVER
+  const t = text
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[''`´]/g, '')
+    .replace(/LICEN[CS]E/g, 'LICENSE')
+    .replace(/DR[I1]VER/g, 'DRIVER');
 
   const typeScores = {
     'Passport': 0,
@@ -709,41 +728,76 @@ function detectIdTypeFromText(text) {
     'PhilSys ID': 0
   };
 
-  // Passport signals
-  if (t.includes('PASSPORT') || t.includes('P<') || t.includes('PASSEPORT') || t.includes('TRAVEL DOCUMENT')) {
-    typeScores['Passport'] += 40;
+  // ── Passport (exclusive keywords) ──
+  if (t.includes('PASSPORT') || t.includes('PASSEPORT') || t.includes('TRAVEL DOCUMENT')) {
+    typeScores['Passport'] += 50;
   }
-  if (/\bP[A-Z0-9]<[A-Z]{3}/.test(t)) typeScores['Passport'] += 25; // MRZ-like
-  if (t.includes('NATIONALITY') && t.includes('PASSPORT')) typeScores['Passport'] += 10;
-
-  // PhilSys / National ID signals (Philippine context)
-  if (t.includes('PHILSYS') || t.includes('PHILIPPINE IDENTIFICATION') || t.includes('PHILIPPINE ID')) {
-    typeScores['PhilSys ID'] += 45;
-    typeScores['National ID'] += 20;
-  }
-  if (t.includes('REPUBLIC OF THE PHILIPPINES') || t.includes('REPUBLIKA NG PILIPINAS')) {
-    typeScores['National ID'] += 15;
-    typeScores['PhilSys ID'] += 10;
-  }
-  if (t.includes('NATIONAL ID') || t.includes('NATIONAL IDENTIFICATION')) {
-    typeScores['National ID'] += 35;
-  }
-  if (t.includes('PHILIPPINE') && (t.includes('IDENTITY') || t.includes('IDENTIFICATION'))) {
-    typeScores['National ID'] += 15;
+  if (t.includes('P<') || /\bP[A-Z0-9]<[A-Z]{3}/.test(t)) {
+    typeScores['Passport'] += 30; // MRZ
   }
 
-  // Driver's License
-  if (t.includes("DRIVER'S LICENSE") || t.includes('DRIVERS LICENSE') || t.includes('DRIVER LICENSE')) {
-    typeScores["Driver's License"] += 45;
-  }
-  if (t.includes('LTO') || t.includes('LAND TRANSPORTATION') || t.includes('DL NO') || t.includes('LICENSE NO')) {
-    typeScores["Driver's License"] += 25;
+  // ── Driver's License (strong priority — PH cards also say "Republic of the Philippines") ──
+  if (t.includes('DRIVERS LICENSE') || t.includes('DRIVER LICENSE') || t.includes('DRIVER S LICENSE')) {
+    typeScores["Driver's License"] += 60;
   }
   if (t.includes('DRIVER') && t.includes('LICENSE')) {
+    typeScores["Driver's License"] += 45;
+  }
+  if (t.includes('DRIVER')) {
+    typeScores["Driver's License"] += 25; // OCR often reads the big title word
+  }
+  if (t.includes('LICENSE') && !t.includes('PASSPORT')) {
     typeScores["Driver's License"] += 20;
   }
+  if (t.includes('LTO') || t.includes('LAND TRANSPORTATION') || t.includes('LAND TRANSPORT')) {
+    typeScores["Driver's License"] += 40;
+  }
+  if (t.includes('DL NO') || t.includes('DLNO') || t.includes('LICENSE NO') || t.includes('LIC NO')) {
+    typeScores["Driver's License"] += 30;
+  }
+  // Philippine LTO license number formats: A12-34-567890, G11-24-664792, N03-12-345678, etc.
+  if (/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{6}\b/.test(t) || /\b[A-Z]\d{2}-\d{2}-\d{5,7}\b/.test(t)) {
+    typeScores["Driver's License"] += 50;
+  }
+  // Restriction / conditions codes common on PH DL
+  if (t.includes('RESTRICTION') || t.includes('CONDITIONS') || t.includes('BLOOD TYPE') || t.includes('AGENCY CODE')) {
+    typeScores["Driver's License"] += 15;
+  }
 
-  // Generic government ID signals help overall validity later
+  // ── PhilSys ID ──
+  if (t.includes('PHILSYS') || t.includes('PHILIPPINE IDENTIFICATION CARD') || t.includes('PHILIPPINE ID')) {
+    typeScores['PhilSys ID'] += 55;
+  }
+  if (t.includes('PHILIPPINE IDENTIFICATION')) {
+    typeScores['PhilSys ID'] += 40;
+  }
+  // PhilSys PCN style 4-4-4-4 digits
+  if (/\b\d{4}[-\s]\d{4}[-\s]\d{4}[-\s]\d{4}\b/.test(t)) {
+    typeScores['PhilSys ID'] += 35;
+    typeScores['National ID'] += 15;
+  }
+
+  // ── National ID (only when NOT clearly a DL / Passport) ──
+  if (t.includes('NATIONAL ID') || t.includes('NATIONAL IDENTIFICATION')) {
+    typeScores['National ID'] += 45;
+  }
+  if (t.includes('PHILIPPINE') && (t.includes('IDENTITY') || t.includes('IDENTIFICATION')) && !t.includes('DRIVER')) {
+    typeScores['National ID'] += 20;
+  }
+
+  // Generic PH header — weak signal only (appears on DL, National ID, PhilSys, Passport)
+  const hasStrongDl =
+    typeScores["Driver's License"] >= 40 ||
+    t.includes('DRIVER') ||
+    t.includes('LTO') ||
+    /\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{5,7}\b/.test(t);
+  const hasStrongPassport = typeScores['Passport'] >= 40;
+  if ((t.includes('REPUBLIC OF THE PHILIPPINES') || t.includes('REPUBLIKA NG PILIPINAS')) && !hasStrongDl && !hasStrongPassport) {
+    typeScores['National ID'] += 12;
+    typeScores['PhilSys ID'] += 8;
+  }
+
+  // Pick best
   let bestType = null;
   let bestScore = 0;
   for (const [type, score] of Object.entries(typeScores)) {
@@ -753,8 +807,7 @@ function detectIdTypeFromText(text) {
     }
   }
 
-  // Require a minimum signal; otherwise treat as unknown
-  if (bestScore < 20) {
+  if (bestScore < 25) {
     return { type: null, confidence: bestScore };
   }
   return { type: bestType, confidence: Math.min(100, bestScore) };
@@ -808,11 +861,19 @@ function scoreIdOcrText(text, preferredType) {
 }
 
 function extractIdNumberFromText(text) {
-  const t = text.toUpperCase();
+  const t = text.toUpperCase().replace(/\s+/g, ' ');
+
+  // Philippine LTO license number: e.g. G11-24-664792, N03-12-345678
+  const lto = t.match(/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{5,7}\b/);
+  if (lto) return lto[0].replace(/\s/g, '');
+
+  // PhilSys-style 4-4-4-4
+  const philsys = t.match(/\b\d{4}[-\s]\d{4}[-\s]\d{4}[-\s]\d{4}\b/);
+  if (philsys) return philsys[0].replace(/\s/g, '-');
+
   // Prefer longer alphanumeric tokens (common on IDs)
   const candidates = t.match(/\b[A-Z0-9][-A-Z0-9]{5,18}\b/g) || [];
   if (candidates.length) {
-    // Prefer tokens that contain both letters and digits when possible
     candidates.sort((a, b) => {
       const aMixed = /[A-Z]/.test(a) && /\d/.test(a) ? 1 : 0;
       const bMixed = /[A-Z]/.test(b) && /\d/.test(b) ? 1 : 0;
@@ -823,7 +884,6 @@ function extractIdNumberFromText(text) {
   }
   const digits = t.match(/\b\d{8,16}\b/);
   if (digits) return digits[0];
-  // Last resort: readable fallback so backend length check can still pass for demo
   return 'ID-' + Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Date.now().toString().slice(-4);
 }
 
@@ -891,16 +951,18 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   }
 
   // 3) Automatically match / detect ID type from OCR text
+  // Auto-detect ALWAYS wins when confidence is good — do not keep a wrong pre-selected type
+  // (e.g. user left "National ID" selected but photo is a Driver's License)
   const detection = detectIdTypeFromText(idOcrText);
   const userSelected = getSelectedIdType();
 
-  // Prefer auto-detected type; fall back to user's selection if detection is weak
-  let idType = detection.type;
-  if (!idType && userSelected) {
+  let idType = null;
+  if (detection.type && detection.confidence >= 25) {
+    idType = detection.type;
+  } else if (userSelected) {
     idType = userSelected;
-  }
-  if (!idType) {
-    idType = 'National ID'; // safe default only after we already have decent OCR score
+  } else {
+    idType = 'National ID';
   }
 
   idOcrScore = scoreIdOcrText(idOcrText, idType);
@@ -916,12 +978,10 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     return;
   }
 
-  // If OCR is good but type was weak, still accept and use best guess / selection
-  if (detection.type) {
+  // Lock UI radio to the detected type
+  if (detection.type && detection.confidence >= 25) {
     idType = detection.type;
-    setSelectedIdType(idType); // auto-select the matching radio option
-  } else if (userSelected) {
-    idType = userSelected;
+    setSelectedIdType(idType);
   }
 
   const nameFromForm = document.getElementById('signup-name').value.trim() || 'Detected Name';
@@ -1014,8 +1074,8 @@ async function startIdCamera() {
   if (!cam.ok) {
     applyNoCameraUI('id');
     showAlert('signup-alert', 'error',
-      (cam.reason || 'No camera detected.') +
-      ' You can still use <strong>Drop ID here</strong> to upload a photo of your ID, but you will need a camera later for face verification to finish registration.');
+      (cam.reason || NO_CAMERA_ALERT) +
+      ' You can still use <strong>Drop ID here</strong> for your ID photo, but face verification later still needs a camera to finish registration.');
     return;
   }
 
@@ -1049,13 +1109,13 @@ async function startIdCamera() {
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
       applyNoCameraUI('id');
       showAlert('signup-alert', 'error',
-        'No camera detected. Use <strong>Drop ID here</strong> to upload your ID photo. Note: a camera is still required later for face verification to complete registration.');
+        NO_CAMERA_ALERT + ' You can use <strong>Drop ID here</strong> for the ID photo, but a camera is still required later for face verification.');
     } else if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
       showAlert('signup-alert', 'error',
-        'Camera permission denied. Allow camera access, or use <strong>Drop ID here</strong> instead.');
+        "Camera permission was denied. Allow camera access in your browser, or use <strong>Drop ID here</strong> instead.");
     } else {
       showAlert('signup-alert', 'error',
-        'Camera access denied or unavailable. Allow camera permission in your browser, or use <strong>Drop ID here</strong> instead.');
+        "We can't access your camera. Make sure it is connected and not blocked, or use <strong>Drop ID here</strong> instead.");
     }
   }
 }
@@ -1156,9 +1216,6 @@ async function startCamera() {
   const cam = await checkCameraAvailable();
   if (!cam.ok) {
     applyNoCameraUI('face');
-    showAlert('signup-alert', 'error',
-      cam.reason ||
-      'No camera detected. You cannot create an account without a camera. Please use a PC or phone with a working camera.');
     return;
   }
 
@@ -1196,11 +1253,12 @@ async function startCamera() {
   } catch (err) {
     console.warn('Face camera error', err);
     const name = err && (err.name || '');
-    let msg = 'Camera access failed. Please allow camera permission and try again.';
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-      msg = 'No camera detected on this device. You cannot register without a camera. Please use a PC or phone with a working camera.';
       applyNoCameraUI('face');
-    } else if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return;
+    }
+    let msg = 'Camera access failed. Please allow camera permission and try again.';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
       msg = 'Camera permission was denied. You must allow camera access to complete face verification and register.';
     } else if (name === 'NotReadableError' || name === 'TrackStartError') {
       msg = 'Camera is in use by another app or is not readable. Close other apps using the camera and try again.';
@@ -1210,9 +1268,9 @@ async function startCamera() {
     showAlert('signup-alert', 'error', msg);
     const status = document.getElementById('face-status');
     if (status) {
-      status.style.display = 'inline-flex';
-      status.className = 'face-status error';
-      status.innerHTML = '<i class="fas fa-video-slash"></i> Camera unavailable — cannot register';
+      status.style.display = 'block';
+      status.className = 'face-status error no-camera-status';
+      status.innerHTML = NO_CAMERA_HTML;
     }
     const submitBtn = document.getElementById('signup-submit-btn');
     if (submitBtn) submitBtn.disabled = true;
@@ -1362,9 +1420,6 @@ async function handleSignup() {
     const cam = await checkCameraAvailable();
     if (!cam.ok) {
       applyNoCameraUI('face');
-      showAlert('signup-alert', 'error',
-        cam.reason ||
-        'No camera detected. You cannot create an account without a camera. Please use a device with a working camera.');
       return;
     }
     showAlert('signup-alert', 'error',
@@ -1462,6 +1517,36 @@ async function resendCode() {
   }
 }
 
+let pendingResetEmail = null;
+
+function showResetPasswordForm(email) {
+  pendingResetEmail = email || null;
+  const forgotForm = document.getElementById('forgot-form');
+  const resetForm = document.getElementById('reset-form');
+  const sub = document.getElementById('forgot-subtitle');
+  if (forgotForm) forgotForm.style.display = 'none';
+  if (resetForm) resetForm.style.display = 'block';
+  if (sub) sub.textContent = 'Enter the 6-digit code from your email and choose your new password.';
+  const codeEl = document.getElementById('reset-code');
+  if (codeEl) setTimeout(() => codeEl.focus(), 50);
+}
+
+function resetForgotPanel() {
+  pendingResetEmail = null;
+  const forgotForm = document.getElementById('forgot-form');
+  const resetForm = document.getElementById('reset-form');
+  const sub = document.getElementById('forgot-subtitle');
+  if (forgotForm) forgotForm.style.display = 'block';
+  if (resetForm) {
+    resetForm.style.display = 'none';
+    try { resetForm.reset(); } catch (e) { /* ignore */ }
+  }
+  if (sub) {
+    sub.textContent = 'Enter your registered email. We will send a 6-digit code so you can set your own new password.';
+  }
+  ['reset-code', 'reset-password', 'reset-password2', 'forgot-email'].forEach(id => clearFieldError(id));
+}
+
 async function handleForgot(e) {
   e.preventDefault();
   clearFieldError('forgot-email');
@@ -1491,11 +1576,13 @@ async function handleForgot(e) {
   try {
     const data = await api('forgot', { email });
     if (data && data.ok) {
-      // Success notice appears under the button (forgot-alert is placed below the form)
-      showAlert('forgot-alert', 'success', data.message ||
-        'If an account exists for that email, a temporary password has been sent. Check your inbox and spam folder.');
+      showAlert('forgot-alert', data.need_reset ? 'success' : 'info', data.message ||
+        'If an account exists for that email, a reset code has been sent. Check your inbox and spam folder.');
+      if (data.need_reset) {
+        showResetPasswordForm(data.email || email);
+      }
     } else {
-      const msg = (data && data.message) || 'Could not send temporary password. Please try again.';
+      const msg = (data && data.message) || 'Could not send reset code. Please try again.';
       showAlert('forgot-alert', 'error', msg);
       setFieldError('forgot-email', msg);
     }
@@ -1505,7 +1592,79 @@ async function handleForgot(e) {
 
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Temporary Password';
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reset Code';
+  }
+  return false;
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  ['reset-code', 'reset-password', 'reset-password2'].forEach(id => clearFieldError(id));
+  const alertEl = document.getElementById('forgot-alert');
+  if (alertEl) alertEl.innerHTML = '';
+
+  const email = (pendingResetEmail || (document.getElementById('forgot-email')?.value || '')).trim().toLowerCase();
+  const code = (document.getElementById('reset-code')?.value || '').trim();
+  const password = document.getElementById('reset-password')?.value || '';
+  const password2 = document.getElementById('reset-password2')?.value || '';
+  const btn = document.getElementById('reset-btn');
+  let ok = true;
+
+  if (!email) {
+    showAlert('forgot-alert', 'error', 'Email is missing. Go back and request a new code.');
+    return false;
+  }
+  if (!code) {
+    setFieldError('reset-code', 'Please enter the 6-digit code from your email.');
+    ok = false;
+  } else if (!/^\d{6}$/.test(code)) {
+    setFieldError('reset-code', 'Code must be exactly 6 digits.');
+    ok = false;
+  }
+  if (!password) {
+    setFieldError('reset-password', 'Please enter your new password.');
+    ok = false;
+  } else if (password.length < 8) {
+    setFieldError('reset-password', 'Password must be at least 8 characters.');
+    ok = false;
+  }
+  if (!password2) {
+    setFieldError('reset-password2', 'Please confirm your new password.');
+    ok = false;
+  } else if (password !== password2) {
+    setFieldError('reset-password2', 'Passwords do not match.');
+    ok = false;
+  }
+  if (!ok) return false;
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Updating...';
+  }
+
+  try {
+    const data = await api('reset_password', { email, code, password, password2 });
+    if (data && data.ok) {
+      showAlert('forgot-alert', 'success', data.message || 'Password updated. You can sign in now.');
+      setTimeout(() => {
+        resetForgotPanel();
+        showPanel('login');
+        showAlert('login-alert', 'success', 'Password changed. Sign in with your new password.');
+      }, 1200);
+    } else {
+      const msg = (data && data.message) || 'Could not update password.';
+      showAlert('forgot-alert', 'error', msg);
+      if (/code/i.test(msg)) setFieldError('reset-code', msg);
+      if (/match/i.test(msg)) setFieldError('reset-password2', msg);
+      else if (/password/i.test(msg)) setFieldError('reset-password', msg);
+    }
+  } catch (err) {
+    showAlert('forgot-alert', 'error', 'Network error. Please try again.');
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-key"></i> Change Password';
   }
   return false;
 }
@@ -1524,6 +1683,9 @@ document.addEventListener('DOMContentLoaded', () => {
     ['signup-password', 'signup-password'],
     ['signup-password2', 'signup-password2'],
     ['forgot-email', 'forgot-email'],
+    ['reset-code', 'reset-code'],
+    ['reset-password', 'reset-password'],
+    ['reset-password2', 'reset-password2'],
     ['verify-code', 'verify-code']
   ];
   fieldMap.forEach(([id]) => {
