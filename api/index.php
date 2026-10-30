@@ -241,22 +241,47 @@ if (isLoggedIn()) {
             </div>
           </div>
 
-          <!-- FORGOT -->
+          <!-- FORGOT / RESET PASSWORD -->
           <div id="panel-forgot" class="form-panel">
             <button class="back-btn" onclick="showPanel('login')"><i class="fas fa-arrow-left"></i> Back</button>
             <h2>Reset Password</h2>
-            <p class="subtitle">Enter the email you used to register. We will send a temporary password you can use to sign in.</p>
+            <p class="subtitle" id="forgot-subtitle">Enter your registered email. We will send a 6-digit code so you can set your own new password.</p>
+            <div id="forgot-alert" style="margin-bottom:1rem;"></div>
+
+            <!-- Step A: request code -->
             <form id="forgot-form" onsubmit="return handleForgot(event)" novalidate>
               <div class="form-group">
                 <label>Email Address <span class="required">*</span></label>
                 <input type="email" class="form-control" id="forgot-email" placeholder="you@example.com" autocomplete="email">
                 <div class="field-error" id="err-forgot-email"><i class="fas fa-exclamation-circle"></i> <span></span></div>
               </div>
-              <button type="submit" class="btn btn-primary" id="forgot-btn"><i class="fas fa-paper-plane"></i> Send Temporary Password</button>
+              <button type="submit" class="btn btn-primary" id="forgot-btn"><i class="fas fa-paper-plane"></i> Send Reset Code</button>
             </form>
-            <!-- Notice below the form (under the button), same pattern as common auth sites -->
-            <div id="forgot-alert" style="margin-top:1rem;"></div>
-            <div class="auth-links"><a href="#" onclick="showPanel('login'); return false;">Back to Login</a></div>
+
+            <!-- Step B: enter code + choose own new password (shown after code is sent) -->
+            <form id="reset-form" onsubmit="return handleResetPassword(event)" novalidate style="display:none; margin-top:0.5rem;">
+              <div class="form-group">
+                <label>Reset Code <span class="required">*</span></label>
+                <input type="text" class="form-control" id="reset-code" placeholder="6-digit code from email" maxlength="6" inputmode="numeric" style="text-align:center; letter-spacing:0.3em; font-size:1.15rem;" autocomplete="one-time-code">
+                <div class="field-error" id="err-reset-code"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+              </div>
+              <div class="form-group">
+                <label>New Password <span class="required">*</span></label>
+                <div class="input-with-icon">
+                  <input type="password" class="form-control" id="reset-password" placeholder="Min. 8 characters" autocomplete="new-password">
+                  <button type="button" class="toggle-password" onclick="togglePassword('reset-password', this)"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="field-error" id="err-reset-password"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+              </div>
+              <div class="form-group">
+                <label>Confirm New Password <span class="required">*</span></label>
+                <input type="password" class="form-control" id="reset-password2" placeholder="Re-enter new password" autocomplete="new-password">
+                <div class="field-error" id="err-reset-password2"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+              </div>
+              <button type="submit" class="btn btn-primary" id="reset-btn"><i class="fas fa-key"></i> Change Password</button>
+            </form>
+
+            <div class="auth-links" style="margin-top:1rem;"><a href="#" onclick="showPanel('login'); return false;">Back to Login</a></div>
           </div>
 
           <!-- VERIFY -->
