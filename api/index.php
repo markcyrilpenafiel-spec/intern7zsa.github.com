@@ -113,11 +113,11 @@ if (isLoggedIn()) {
             <!-- Step 2: Valid ID -->
             <div id="signup-step-2" class="signup-step" style="display:none;">
               <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem; text-align:center;">
-                Select your ID type, then upload or capture a clear photo of your <strong>real government ID</strong>. Selfies and non-ID images will be rejected.
+                Upload or capture a clear photo of your <strong>real government ID</strong>. The system will check for a face on the document, read the text (OCR), and <strong>automatically match the ID type</strong>. Selfies and non-ID images will be rejected.
               </p>
 
               <div class="form-group">
-                <label>Valid ID Type <span class="required">*</span></label>
+                <label>Valid ID Type <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">(auto-matched from photo; you may pre-select)</span></label>
                 <div class="id-type-grid" id="id-type-grid">
                   <label class="id-type-option selected">
                     <input type="radio" name="id_type_choice" value="National ID" checked>
@@ -164,6 +164,9 @@ if (isLoggedIn()) {
 
               <div id="id-method-camera" style="display:none;">
                 <div class="face-capture">
+                  <p style="font-size:0.85rem; color:var(--text-muted); text-align:center; margin-bottom:0.75rem;">
+                    Open the camera, point your <strong>government ID</strong> (face + text visible) at the lens, then capture. The system will validate and auto-detect the ID type.
+                  </p>
                   <div style="position:relative; max-width:320px; margin:0 auto 1rem;">
                     <video id="id-video" autoplay playsinline style="display:none; width:100%; border-radius:8px; background:#000;"></video>
                     <canvas id="id-canvas" style="display:none;"></canvas>
@@ -204,6 +207,7 @@ if (isLoggedIn()) {
             <div id="signup-step-3" class="signup-step" style="display:none;">
               <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1rem; text-align:center;">
                 Facial validation: Detection → Landmarks → Embedding → 1:1 match to your ID. Video stays blurred until your face is recognized.
+                <br><strong>A working camera is required.</strong> If no camera is detected, you cannot complete registration.
               </p>
               <div class="face-capture">
                 <div style="position:relative; max-width:280px; margin:0 auto 1rem;">
