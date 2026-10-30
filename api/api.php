@@ -328,6 +328,7 @@ switch ($action) {
         break;
 
     case 'forgot':
+        // Step 1: send a reset CODE (user will choose their own new password next)
         $email = strtolower(trim($_POST['email'] ?? ''));
         if (!$email) {
             jsonResponse(['ok' => false, 'message' => 'Please enter your email address.'], 400);
@@ -338,35 +339,82 @@ switch ($action) {
 
         $user = findUserByEmail($email);
         if (!$user) {
-            // Same generic wording so we do not reveal whether the email is registered
             jsonResponse([
                 'ok' => true,
                 'sent' => false,
-                'message' => 'If an account exists for that email, a temporary password has been sent. Check your inbox and spam folder. If you never created an account, sign up first.'
+                'need_reset' => false,
+                'message' => 'If an account exists for that email, a reset code has been sent. Check your inbox and spam folder. If you never created an account, sign up first.'
             ]);
         }
 
-        $tempPass = 'Temp@' . random_int(100000, 999999);
+        $code = (string) random_int(100000, 999999);
         updateUser((int)$user['id'], [
-            'password' => password_hash($tempPass, PASSWORD_DEFAULT),
-            'reset_token' => bin2hex(random_bytes(16)),
+            'reset_token' => $code,
             'reset_expires' => time() + 3600
+            // password is NOT changed until the user submits a new one
         ]);
 
-        $sent = sendPasswordResetEmail($user['email'], $user['name'], $tempPass);
+        $sent = sendPasswordResetEmail($user['email'], $user['name'], $code);
         if (!$sent) {
-            // Password was still updated — tell the user email failed so they are not stuck
             jsonResponse([
                 'ok' => false,
                 'sent' => false,
-                'message' => 'Your password was reset on the server, but the email could not be sent. Check SMTP settings in config, or try again in a few minutes. Also check spam/junk.'
+                'need_reset' => false,
+                'message' => 'Could not send the reset code email. Check SMTP settings or try again later. Also check spam/junk.'
             ], 500);
         }
 
         jsonResponse([
             'ok' => true,
             'sent' => true,
-            'message' => 'A temporary password has been sent to your email. Check your inbox and spam folder, then sign in with it and change your password.'
+            'need_reset' => true,
+            'email' => $user['email'],
+            'message' => 'A 6-digit reset code was sent to your email. Enter the code and choose your new password below.'
+        ]);
+        break;
+
+    case 'reset_password':
+        // Step 2: verify code + set the user's own new password
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $code = trim($_POST['code'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $password2 = $_POST['password2'] ?? '';
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['ok' => false, 'message' => 'Please enter a valid email address.'], 400);
+        }
+        if (!$code || !preg_match('/^\d{6}$/', $code)) {
+            jsonResponse(['ok' => false, 'message' => 'Please enter the 6-digit reset code from your email.'], 400);
+        }
+        if (strlen($password) < 8) {
+            jsonResponse(['ok' => false, 'message' => 'New password must be at least 8 characters.'], 400);
+        }
+        if ($password !== $password2) {
+            jsonResponse(['ok' => false, 'message' => 'Passwords do not match.'], 400);
+        }
+
+        $user = findUserByEmail($email);
+        if (!$user) {
+            jsonResponse(['ok' => false, 'message' => 'Invalid reset request. Check your email and code.'], 400);
+        }
+        $stored = (string)($user['reset_token'] ?? '');
+        $expires = (int)($user['reset_expires'] ?? 0);
+        if ($stored === '' || !hash_equals($stored, $code)) {
+            jsonResponse(['ok' => false, 'message' => 'Invalid or expired reset code. Request a new one.'], 400);
+        }
+        if ($expires < time()) {
+            jsonResponse(['ok' => false, 'message' => 'This reset code has expired. Please request a new one.'], 400);
+        }
+
+        updateUser((int)$user['id'], [
+            'password' => password_hash($password, PASSWORD_DEFAULT),
+            'reset_token' => null,
+            'reset_expires' => null
+        ]);
+
+        jsonResponse([
+            'ok' => true,
+            'message' => 'Password updated successfully. You can now sign in with your new password.'
         ]);
         break;
 
