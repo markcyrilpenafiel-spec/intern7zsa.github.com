@@ -50,11 +50,15 @@ if (isLoggedIn()) {
                   </div>
                   <div class="field-error" id="err-login-password"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 </div>
+                <div class="checkbox-group" id="login-policies-group">
+                  <input type="checkbox" id="accept-policies">
+                  <label for="accept-policies">I accept the <a href="#" onclick="openPolicies(event)">Terms of Service & Privacy Policy</a>. <strong>Required to sign in.</strong></label>
+                </div>
+                <div class="field-error" id="err-login-policies"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 <div class="checkbox-group">
                   <input type="checkbox" id="remember-me">
                   <label for="remember-me">Remember me</label>
                 </div>
-                <div class="field-error" id="err-login-policies"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 <button type="submit" class="btn btn-primary" id="login-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
               </div>
             </form>
@@ -246,8 +250,7 @@ if (isLoggedIn()) {
           <div id="panel-forgot" class="form-panel">
             <button class="back-btn" onclick="showPanel('login')"><i class="fas fa-arrow-left"></i> Back</button>
             <h2>Reset Password</h2>
-            <p class="subtitle">Enter your registered email address and we'll send you a link to reset your password.</p>
-            <div id="forgot-alert"></div>
+            <p class="subtitle">Enter the email you used to register. We will send a temporary password you can use to sign in.</p>
             <form id="forgot-form" onsubmit="return handleForgot(event)" novalidate>
               <div class="form-group">
                 <label>Email Address <span class="required">*</span></label>
@@ -256,6 +259,8 @@ if (isLoggedIn()) {
               </div>
               <button type="submit" class="btn btn-primary" id="forgot-btn"><i class="fas fa-paper-plane"></i> Send Temporary Password</button>
             </form>
+            <!-- Notice below the form (under the button), same pattern as common auth sites -->
+            <div id="forgot-alert" style="margin-top:1rem;"></div>
             <div class="auth-links"><a href="#" onclick="showPanel('login'); return false;">Back to Login</a></div>
           </div>
 
