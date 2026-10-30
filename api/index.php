@@ -50,11 +50,6 @@ if (isLoggedIn()) {
                   </div>
                   <div class="field-error" id="err-login-password"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 </div>
-                <div class="checkbox-group" id="login-policies-group">
-                  <input type="checkbox" id="accept-policies">
-                  <label for="accept-policies">I accept the <a href="#" onclick="openPolicies(event)">Terms of Service & Privacy Policy</a>. <strong>Required to sign in.</strong></label>
-                </div>
-                <div class="field-error" id="err-login-policies"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 <div class="checkbox-group">
                   <input type="checkbox" id="remember-me">
                   <label for="remember-me">Remember me</label>
