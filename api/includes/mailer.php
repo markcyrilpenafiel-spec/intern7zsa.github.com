@@ -77,18 +77,19 @@ function sendVerificationEmail(string $email, string $name, string $code): bool 
     return $ok;
 }
 
-function sendPasswordResetEmail(string $email, string $name, string $tempPass): bool {
-    $subject = 'K-Tix Assist password reset';
+function sendPasswordResetEmail(string $email, string $name, string $code): bool {
+    $subject = 'K-Tix Assist password reset code';
     $html = '
     <div style="font-family:Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#f8fafc;border-radius:12px;">
-      <h2 style="color:#0f172a;margin:0 0 8px;">Password reset</h2>
-      <p style="color:#64748b;margin:0 0 20px;">Hi ' . htmlspecialchars($name) . ', your temporary password is:</p>
-      <div style="background:#fff;border:2px solid #2563eb;border-radius:8px;padding:16px;text-align:center;font-size:20px;font-weight:700;color:#0f172a;">'
-        . htmlspecialchars($tempPass) . '</div>
-      <p style="color:#64748b;margin-top:16px;">Log in with this password, then change it in your profile. It is valid for 1 hour.</p>
+      <h2 style="color:#0f172a;margin:0 0 8px;">Reset your password</h2>
+      <p style="color:#64748b;margin:0 0 20px;">Hi ' . htmlspecialchars($name) . ', use this code to set a new password for your K-Tix Assist account:</p>
+      <div style="background:#fff;border:2px solid #2563eb;border-radius:8px;padding:16px;text-align:center;font-size:28px;letter-spacing:8px;font-weight:700;color:#0f172a;">'
+        . htmlspecialchars($code) . '</div>
+      <p style="color:#64748b;margin-top:16px;">Enter this code on the reset page and choose your own new password. The code expires in 1 hour.</p>
+      <p style="color:#94a3b8;font-size:13px;margin-top:12px;">If you did not request a password reset, you can ignore this email.</p>
       <p style="color:#94a3b8;font-size:12px;">— K-Tix Assist</p>
     </div>';
-    $ok = sendAppEmail($email, $name, $subject, $html, "Your temporary password is: {$tempPass}");
-    logCode($email, 'RESET', $tempPass);
+    $ok = sendAppEmail($email, $name, $subject, $html, "Your password reset code is: {$code}");
+    logCode($email, 'RESET_CODE', $code);
     return $ok;
 }
