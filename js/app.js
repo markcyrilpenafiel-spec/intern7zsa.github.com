@@ -120,7 +120,6 @@ function clearAllSignupFieldErrors() {
 function clearAllLoginFieldErrors() {
   clearFieldError('login-email');
   clearFieldError('login-password');
-  clearGroupError('login-policies-group', 'err-login-policies');
 }
 
 function togglePassword(inputId, btn) {
@@ -288,20 +287,17 @@ function openPolicies(e) { if (e) e.preventDefault(); document.getElementById('p
 function closePolicies() { document.getElementById('policies-modal').classList.remove('show'); }
 function acceptPolicies() {
   policiesAccepted = true;
-  const a = document.getElementById('accept-policies');
   const b = document.getElementById('signup-policies');
-  if (a) a.checked = true;
   if (b) b.checked = true;
+  clearGroupError('signup-policies-group', 'err-signup-policies');
   closePolicies();
 }
 function denyPolicies() {
   policiesAccepted = false;
-  const a = document.getElementById('accept-policies');
   const b = document.getElementById('signup-policies');
-  if (a) a.checked = false;
   if (b) b.checked = false;
   closePolicies();
-  showAlert('login-alert', 'error', 'You must accept the policies to log in or create an account.');
+  showAlert('signup-alert', 'error', 'You must accept the Terms of Service & Privacy Policy to create an account.');
 }
 document.getElementById('policies-modal')?.addEventListener('click', function (e) {
   if (e.target === this) closePolicies();
@@ -317,16 +313,14 @@ async function handleLogin(e) {
   const emailEl = document.getElementById('login-email');
   const passwordEl = document.getElementById('login-password');
   const rememberEl = document.getElementById('remember-me');
-  const policiesEl = document.getElementById('accept-policies');
   const btn = document.getElementById('login-btn');
 
   const email = emailEl ? emailEl.value.trim() : '';
   const password = passwordEl ? passwordEl.value : '';
   const remember = rememberEl && rememberEl.checked ? '1' : '';
-  const policies = (policiesEl && policiesEl.checked) || policiesAccepted;
   let ok = true;
 
-  // Same style of red field errors as Create Account
+  // Red field errors for email + password only (no policies checkbox on login)
   if (!email) {
     setFieldError('login-email', 'Please enter your email address.');
     ok = false;
@@ -338,10 +332,6 @@ async function handleLogin(e) {
     setFieldError('login-password', 'Please enter your password.');
     ok = false;
   }
-  if (!policies) {
-    setGroupError('login-policies-group', 'err-login-policies', 'You must accept the Terms of Service & Privacy Policy to log in.');
-    ok = false;
-  }
   if (!ok) return false;
 
   if (btn) {
@@ -350,7 +340,8 @@ async function handleLogin(e) {
   }
 
   try {
-    const data = await api('login', { email, password, remember, policies: policies ? '1' : '' });
+    // policies: '1' so backend allows login without a checkbox on this screen
+    const data = await api('login', { email, password, remember, policies: '1' });
     if (data.ok) {
       showAlert('login-alert', 'success', data.message);
       setTimeout(() => { window.location.href = data.redirect || 'dashboard.php'; }, 600);
@@ -361,15 +352,11 @@ async function handleLogin(e) {
       showPanel('verify');
       showAlert('verify-alert', 'warning', data.message);
     } else {
-      // Show red boxes under fields for failed login (same UX as signup)
       const msg = data.message || 'Login failed.';
       showAlert('login-alert', 'error', msg);
       if (/email|password|invalid|credentials/i.test(msg)) {
         setFieldError('login-email', 'Check your email address.');
         setFieldError('login-password', msg);
-      }
-      if (/polic/i.test(msg)) {
-        setGroupError('login-policies-group', 'err-login-policies', msg);
       }
     }
   } catch (err) {
@@ -386,18 +373,11 @@ async function handleLogin(e) {
 /* ---------- Face ID Login ---------- */
 async function startLoginFace() {
   const emailEl = document.getElementById('login-email');
-  const policiesEl = document.getElementById('accept-policies');
   const email = emailEl ? emailEl.value.trim() : '';
-  const policies = (policiesEl && policiesEl.checked) || policiesAccepted;
 
   if (!email) {
     setFieldError('login-email', 'Enter your email first, then use Face ID.');
     showAlert('login-alert', 'error', 'Enter your email first, then use Face ID.');
-    return;
-  }
-  if (!policies) {
-    setGroupError('login-policies-group', 'err-login-policies', 'Accept the policies before using Face ID.');
-    showAlert('login-alert', 'error', 'Accept the policies before using Face ID.');
     return;
   }
 
@@ -1553,8 +1533,6 @@ document.addEventListener('DOMContentLoaded', () => {
       el.addEventListener('change', () => clearFieldError(id));
     }
   });
-  const polLogin = document.getElementById('accept-policies');
-  if (polLogin) polLogin.addEventListener('change', () => clearGroupError('login-policies-group', 'err-login-policies'));
   const polSignup = document.getElementById('signup-policies');
   if (polSignup) polSignup.addEventListener('change', () => clearGroupError('signup-policies-group', 'err-signup-policies'));
 });
