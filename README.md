@@ -17,18 +17,15 @@ PHP + JSON storage · Real SMTP email · Face ID (1:1) · Strict ID validation
    - Add the CNAME / A records Vercel shows you
 3. Wait 1–5 minutes for DNS
 
-### Important notes for Vercel
+### Important notes for production / custom domain
 
-- Data & uploads are stored in `/tmp` (ephemeral). Users are re-seeded on cold start if the JSON is missing.
-- Demo accounts (always available after seed):
-  | Role  | Email          | Password  |
-  |-------|----------------|-----------|
-  | Admin | admin@ktix.com | Admin@123 |
-  | Staff | staff@ktix.com | Staff@123 |
+- **No demo accounts.** Users are created only through the real signup flow (government ID + face verification + email code).
+- On Vercel, data & uploads use `/tmp` (ephemeral). Prefer a host with persistent storage (or a database) so accounts are not lost on cold starts.
+- Use **HTTPS** so camera access works in the browser.
 
-### SMTP (already configured)
+### SMTP
 
-Edit `api/includes/config.php` if you need to change Gmail App Password.
+Edit `api/includes/config.php` and set your own SMTP credentials (e.g. Gmail App Password) before going live.
 
 ## Local XAMPP
 
