@@ -30,51 +30,12 @@ define('SMTP_FROM_NAME', 'K-Tix Assist');
 define('FACE_MATCH_THRESHOLD', 0.58);
 
 function getUsers(): array {
+    // Production: no demo accounts. Start with an empty user list.
+    // Create real accounts only via the signup flow (or add an admin manually later).
     if (!file_exists(USERS_FILE)) {
-        $seed = [
-            [
-                'id' => 1,
-                'name' => 'System Administrator',
-                'email' => 'admin@ktix.com',
-                'password' => password_hash('Admin@123', PASSWORD_DEFAULT),
-                'role' => 'admin',
-                'verified' => 1,
-                'verify_code' => null,
-                'id_filename' => null,
-                'face_filename' => null,
-                'face_embedding' => null,
-                'id_number' => null,
-                'id_type' => null,
-                'id_face_quality' => 100,
-                'face_verified' => 1,
-                'face_match_score' => 100,
-                'reset_token' => null,
-                'reset_expires' => null,
-                'created_at' => date('c')
-            ],
-            [
-                'id' => 2,
-                'name' => 'Staff Member',
-                'email' => 'staff@ktix.com',
-                'password' => password_hash('Staff@123', PASSWORD_DEFAULT),
-                'role' => 'staff',
-                'verified' => 1,
-                'verify_code' => null,
-                'id_filename' => null,
-                'face_filename' => null,
-                'face_embedding' => null,
-                'id_number' => null,
-                'id_type' => null,
-                'id_face_quality' => 100,
-                'face_verified' => 1,
-                'face_match_score' => 100,
-                'reset_token' => null,
-                'reset_expires' => null,
-                'created_at' => date('c')
-            ]
-        ];
-        saveUsers($seed);
-        return $seed;
+        $empty = [];
+        saveUsers($empty);
+        return $empty;
     }
     $raw = file_get_contents(USERS_FILE);
     $data = json_decode($raw, true);
