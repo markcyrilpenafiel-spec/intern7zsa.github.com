@@ -78,6 +78,8 @@ body::before {
 .auth-wrapper {
   display: flex;
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
   z-index: 1;
 }
@@ -92,6 +94,8 @@ body::before {
   flex-shrink: 0;
   border-right: 1px solid var(--border-color);
   box-shadow: 4px 0 30px rgba(168, 85, 247, 0.08);
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .auth-sidebar .logo {
@@ -180,13 +184,15 @@ body::before {
   color: var(--text-muted);
 }
 
-/* Main content area */
+/* Main content area — stay steady; avoid whole-page jump scrolling */
 .auth-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: transparent;
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
+  height: 100vh;
 }
 
 .auth-header {
@@ -228,10 +234,12 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+  min-height: 0;
 }
 
-/* Glassmorphism auth card */
+/* Glassmorphism auth card — fixed in view; internal scroll only if needed */
 .auth-card {
   background: var(--bg-card);
   backdrop-filter: blur(20px);
@@ -241,8 +249,13 @@ body::before {
   box-shadow: var(--shadow-lg), var(--neon-glow);
   width: 100%;
   max-width: 480px;
-  padding: 2.5rem;
+  padding: 1.5rem 1.75rem 1.75rem;
   position: relative;
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.35) transparent;
 }
 
 .auth-card .back-btn {
@@ -268,9 +281,9 @@ body::before {
 }
 
 .auth-card h2 {
-  font-size: 1.75rem;
+  font-size: 1.45rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
   text-align: center;
   background: linear-gradient(90deg, #fff 30%, var(--neon-cyan) 100%);
   -webkit-background-clip: text;
@@ -281,13 +294,13 @@ body::before {
 .auth-card .subtitle {
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 2rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
 }
 
 /* Forms */
 .form-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.9rem;
 }
 
 .form-group label {
@@ -387,19 +400,19 @@ body::before {
 }
 
 .id-extracted-card {
-  margin-top: 1.25rem;
+  margin-top: 0.75rem;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.35);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.75rem;
   color: var(--text-light);
 }
 
 .id-extracted-card .id-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  font-size: 0.9rem;
+  gap: 8px;
+  font-size: 0.82rem;
 }
 
 .id-extracted-card .id-meta span {
@@ -546,13 +559,14 @@ body::before {
 
 /* Alerts */
 .alert {
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  margin-bottom: 1.25rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.85rem;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
 }
 
 .alert-success {
@@ -583,7 +597,7 @@ body::before {
 .file-upload {
   border: 2px dashed rgba(168, 85, 247, 0.4);
   border-radius: var(--radius-sm);
-  padding: 1.5rem;
+  padding: 0.9rem 1rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.25s;
@@ -602,13 +616,13 @@ body::before {
 }
 
 .file-upload .icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: var(--neon-purple);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .file-upload p {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
@@ -622,14 +636,20 @@ body::before {
 /* Face capture */
 .face-capture {
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .face-capture .controls {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.face-capture video,
+.face-capture img {
+  max-height: 200px;
+  object-fit: cover;
 }
 
 .face-status {
@@ -640,7 +660,7 @@ body::before {
   border-radius: var(--radius-pill);
   font-size: 0.8rem;
   font-weight: 500;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .face-status.pending {
@@ -658,12 +678,68 @@ body::before {
   color: #fca5a5;
 }
 
+/* No-camera notice (reference-style block) */
+.face-status.no-camera-status {
+  display: block;
+  text-align: center;
+  padding: 1rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--text-light);
+}
+
+.no-camera-notice {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.no-camera-notice .no-camera-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.65rem;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: #cbd5e1;
+}
+
+.no-camera-notice h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-bottom: 0.4rem;
+}
+
+.no-camera-notice p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 0.5rem;
+}
+
+.no-camera-notice .no-camera-code {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.no-camera-notice .no-camera-code code {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: #fca5a5;
+  word-break: break-all;
+}
+
 /* Steps */
 .steps {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1rem;
 }
 
 .step-dot {
@@ -796,14 +872,14 @@ body::before {
 .id-type-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 0.25rem;
+  gap: 8px;
+  margin-bottom: 0.15rem;
 }
 
 .id-type-option {
   border: 2px solid rgba(168, 85, 247, 0.25);
   border-radius: var(--radius-sm);
-  padding: 0.85rem 0.5rem;
+  padding: 0.55rem 0.4rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.25s;
@@ -811,8 +887,8 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 4px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-light);
 }
@@ -822,7 +898,7 @@ body::before {
 }
 
 .id-type-option i {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   color: var(--neon-purple);
 }
 
@@ -1084,11 +1160,25 @@ body::before {
 @media (max-width: 768px) {
   .auth-wrapper {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
   }
 
   .auth-sidebar {
     width: 100%;
-    padding: 1.25rem;
+    padding: 1rem 1.25rem;
+    height: auto;
+  }
+
+  .auth-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .auth-content {
+    overflow: visible;
+    padding: 1rem;
   }
 
   .auth-sidebar .nav-section,
@@ -1097,7 +1187,8 @@ body::before {
   }
 
   .auth-card {
-    padding: 1.75rem 1.25rem;
+    padding: 1.25rem 1.1rem;
+    max-height: none;
   }
 
   .dashboard-wrapper {
