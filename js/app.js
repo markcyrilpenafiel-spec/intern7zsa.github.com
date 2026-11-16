@@ -290,11 +290,13 @@ async function ensureFaceModels() {
   }
 }
 
-async function runFacePipeline(input) {
+async function runFacePipeline(input, opts) {
   if (!faceModelsLoaded) await ensureFaceModels();
   if (!faceModelsLoaded) return { detected: false };
 
-  const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: FACE_DETECT_MIN_SCORE });
+  const scoreThreshold = (opts && opts.scoreThreshold != null) ? opts.scoreThreshold : FACE_DETECT_MIN_SCORE;
+  const inputSize = (opts && opts.inputSize) || 320;
+  const options = new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold });
   const result = await faceapi
     .detectSingleFace(input, options)
     .withFaceLandmarks()
@@ -309,6 +311,28 @@ async function runFacePipeline(input) {
     landmarks: result.landmarks,
     box: result.detection.box
   };
+}
+
+/**
+ * Lenient face detection for ID photos (small faces, phone cameras, low light).
+ * Tries several detector settings; does NOT hard-fail on low quality.
+ */
+async function detectFaceOnId(input) {
+  const attempts = [
+    { inputSize: 416, scoreThreshold: 0.2 },
+    { inputSize: 512, scoreThreshold: 0.15 },
+    { inputSize: 320, scoreThreshold: 0.25 },
+    { inputSize: 224, scoreThreshold: 0.15 }
+  ];
+  let best = { detected: false, score: 0 };
+  for (const a of attempts) {
+    try {
+      const r = await runFacePipeline(input, a);
+      if (r.detected && r.score > (best.score || 0)) best = r;
+      if (best.detected && best.score >= 0.35) break;
+    } catch (e) { /* try next */ }
+  }
+  return best;
 }
 
 function euclideanDistance(a, b) {
@@ -651,8 +675,8 @@ async function goSignupStep3() {
   const upload = document.getElementById('id-upload-area');
   if (upload) upload.classList.remove('is-invalid', 'shake');
 
-  if (!idFile || !extractedIdInfo || !idHasFace) {
-    const msg = 'Please upload or capture a clear photo of your real government ID first.';
+  if (!idFile || !extractedIdInfo) {
+    const msg = 'Please upload or capture your government ID and wait until the name is matched first.';
     const err = document.getElementById('err-id-upload');
     if (err) {
       const span = err.querySelector('span');
@@ -668,8 +692,9 @@ async function goSignupStep3() {
     showAlert('signup-alert', 'error', msg);
     return;
   }
-  if (idOcrScore < 25) {
-    showAlert('signup-alert', 'error', 'ID text validation failed. Upload a clearer photo of a real government ID.');
+  // OCR score is soft — only block empty/unreadable documents (threshold lowered)
+  if (idOcrScore < 12 && !(idOcrText && idOcrText.trim().length >= 8)) {
+    showAlert('signup-alert', 'error', 'Could not read enough text from the ID. Try another photo.');
     if (upload) {
       upload.classList.add('is-invalid', 'shake');
     }
@@ -1025,9 +1050,27 @@ function normalizePersonName(name) {
     .trim();
 }
 
+/** Simple edit distance for OCR typos (e.g. PENAFIEL vs PENAFIE1) */
+function tokenSimilar(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length >= 3 && b.length >= 3 && (a.startsWith(b.slice(0, 3)) || b.startsWith(a.slice(0, 3)))) {
+    // Allow small length difference / 1–2 char noise
+    const maxLen = Math.max(a.length, b.length);
+    const minLen = Math.min(a.length, b.length);
+    if (maxLen - minLen > 2) return false;
+    let diff = 0;
+    for (let i = 0; i < minLen; i++) if (a[i] !== b[i]) diff++;
+    diff += maxLen - minLen;
+    return diff <= 2;
+  }
+  return false;
+}
+
 /**
- * Fuzzy name match: shared significant tokens.
- * Returns { match: boolean, score: 0-100, formTokens, ocrTokens, shared }
+ * Fuzzy name match: shared significant tokens (OCR-tolerant).
+ * Rejects clearly different people (e.g. RAFOLS vs PENAFIEL).
+ * Allows middle name missing / minor OCR typos.
  */
 function namesMatch(formName, ocrName) {
   const a = normalizePersonName(formName);
@@ -1044,25 +1087,22 @@ function namesMatch(formName, ocrName) {
   const shared = [];
   for (const ft of formTokens) {
     for (const ot of ocrTokens) {
-      if (ft === ot || (ft.length >= 4 && ot.startsWith(ft.slice(0, 4))) || (ot.length >= 4 && ft.startsWith(ot.slice(0, 4)))) {
+      if (tokenSimilar(ft, ot)) {
         if (!shared.includes(ft)) shared.push(ft);
         break;
       }
     }
   }
 
-  // Score: how many form name tokens appear on the ID
   const score = Math.round((shared.length / formTokens.length) * 100);
-  // Require at least 2 shared tokens, or 1 if form only has 1–2 names and exact match on a long token
   let match = false;
-  if (formTokens.length >= 2) {
-    match = shared.length >= 2 || (shared.length >= 1 && score >= 50 && shared[0].length >= 5);
+  if (formTokens.length >= 3) {
+    // First + last (or 2 of 3) is enough; middle initial often missing on OCR
+    match = shared.length >= 2 || (shared.length >= 1 && score >= 40 && shared.some(s => s.length >= 5));
+  } else if (formTokens.length === 2) {
+    match = shared.length >= 2 || (shared.length === 1 && shared[0].length >= 5 && score >= 50);
   } else {
     match = shared.length >= 1 && shared[0].length >= 4;
-  }
-  // High bar if OCR name is very short
-  if (ocrTokens.length === 1 && formTokens.length >= 2) {
-    match = shared.length >= 1 && score >= 40;
   }
 
   return { match, score, formTokens, ocrTokens, shared };
@@ -1107,47 +1147,23 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   document.getElementById('id-continue-btn').disabled = true;
   document.getElementById('id-extracted').style.display = 'none';
-  showAlert('signup-alert', 'info', 'Validating ID… detecting face and reading text…');
+  showAlert('signup-alert', 'info', 'Validating ID… reading text and checking name…');
 
   await ensureFaceModels();
 
-  // 1) Face must be present on the ID (rejects pure text / blank cards / selfies without ID layout)
-  let faceResult = null;
+  // 1) Face on ID — LENIENT (phone cameras / low light / small face on card).
+  // Quality is NOT a hard fail. Only used as a soft signal.
+  let faceResult = { detected: false, score: 0, descriptor: null };
   try {
-    faceResult = await runFacePipeline(canvas);
+    faceResult = await detectFaceOnId(canvas);
   } catch (e) { /* ignore */ }
 
-  if (!faceResult || !faceResult.detected || !faceResult.descriptor) {
-    idFile = null;
-    idHasFace = false;
-    document.getElementById('id-continue-btn').disabled = true;
-    showValidationModal(
-      'Not a valid ID photo',
-      'No face was detected on this image. A real government ID must show the holder’s photo.',
-      'Upload or capture a clear photo of your National ID, Passport, Driver\'s License, or PhilSys ID — not a selfie and not a document without a face photo.'
-    );
-    showAlert('signup-alert', 'error', 'No face on ID — see popup.');
-    return;
-  }
-  idHasFace = true;
-  idFaceDescriptor = faceResult.descriptor;
-  const faceQ = Math.round(faceResult.score * 100);
+  idHasFace = !!(faceResult && faceResult.detected);
+  idFaceDescriptor = (faceResult && faceResult.descriptor) ? faceResult.descriptor : null;
+  const faceQ = idHasFace ? Math.round((faceResult.score || 0) * 100) : 0;
 
-  if (faceQ < 40) {
-    idFile = null;
-    idHasFace = false;
-    document.getElementById('id-continue-btn').disabled = true;
-    showValidationModal(
-      'ID photo too unclear',
-      'Face on the ID is too unclear (quality ' + faceQ + '%). The system cannot verify this document.',
-      'Use better lighting and make sure the ID photo is sharp and fully visible, then try again.'
-    );
-    showAlert('signup-alert', 'error', 'ID face quality too low — see popup.');
-    return;
-  }
-
-  // 2) OCR with Tesseract
-  showAlert('signup-alert', 'info', 'Face found · reading ID text (OCR)…');
+  // 2) OCR with Tesseract (primary path for name matching)
+  showAlert('signup-alert', 'info', 'Reading ID text (OCR)…');
   try {
     if (typeof Tesseract !== 'undefined') {
       const { data } = await Tesseract.recognize(canvas, 'eng', {
@@ -1155,7 +1171,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
           if (m.status === 'recognizing text' && m.progress != null) {
             const pct = Math.round(m.progress * 100);
             if (pct % 20 === 0) {
-              showAlert('signup-alert', 'info', 'Face found · reading ID text (OCR)… ' + pct + '%');
+              showAlert('signup-alert', 'info', 'Reading ID text (OCR)… ' + pct + '%');
             }
           }
         }
@@ -1170,14 +1186,12 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     idOcrText = '';
   }
 
-  // 3) Automatically match / detect ID type from OCR text
-  // Auto-detect ALWAYS wins when confidence is good — do not keep a wrong pre-selected type
-  // (e.g. user left "National ID" selected but photo is a Driver's License)
+  // 3) Detect ID type (soft)
   const detection = detectIdTypeFromText(idOcrText);
   const userSelected = getSelectedIdType();
 
   let idType = null;
-  if (detection.type && detection.confidence >= 25) {
+  if (detection.type && detection.confidence >= 20) {
     idType = detection.type;
   } else if (userSelected) {
     idType = userSelected;
@@ -1187,24 +1201,22 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   idOcrScore = scoreIdOcrText(idOcrText, idType);
 
-  // Reject if document does not look like any government ID
-  if (idOcrScore < 25) {
+  // Soft document check: only block if OCR found almost nothing usable
+  if (idOcrScore < 12 && (!idOcrText || idOcrText.trim().length < 8)) {
     document.getElementById('id-extracted').style.display = 'none';
     idFile = null;
-    idHasFace = false;
     extractedIdInfo = null;
     document.getElementById('id-continue-btn').disabled = true;
     showValidationModal(
-      'Invalid ID',
-      'This does not look like a valid government ID. The text is missing or does not match a National ID, Passport, Driver\'s License, or PhilSys ID.',
-      '<strong>What to do:</strong> Upload a clearer, well-lit photo of your real government ID with the face and text fully visible.'
+      'Could not read this image',
+      'Almost no text could be read from this photo. Please try another photo of your ID (less blur, better lighting).',
+      'Quality is not scored strictly — we only need enough text to read the name on the ID.'
     );
-    showAlert('signup-alert', 'error', 'Invalid ID — see popup for details.');
+    showAlert('signup-alert', 'error', 'Could not read ID text — try another photo.');
     return;
   }
 
-  // Lock UI radio to the detected type
-  if (detection.type && detection.confidence >= 25) {
+  if (detection.type && detection.confidence >= 20) {
     idType = detection.type;
     setSelectedIdType(idType);
   }
@@ -1213,42 +1225,46 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   const nameFromId = extractNameFromOcrText(idOcrText);
   const idNumber = extractIdNumberFromText(idOcrText) || 'Not clearly readable';
 
-  // 4) Match Step 1 credentials (full name) against name read from the ID
+  // 4) HARD RULE (only this blocks registration): name on ID must match Step 1 credentials
   const nameCheck = namesMatch(nameFromForm, nameFromId || '');
+
   if (!nameFromId) {
+    // Soft: allow continue with a warning if user confirms form name is correct —
+    // but still require some OCR text so random images don't pass.
+    // Prefer asking user to retry once; if OCR has any person-like tokens, show them.
     document.getElementById('id-extracted').style.display = 'none';
-    idFile = null;
-    idHasFace = false;
-    extractedIdInfo = null;
     document.getElementById('id-continue-btn').disabled = true;
     showValidationModal(
-      'Could not read name on ID',
-      'The system could not clearly read a full name from this ID photo. Without a readable name we cannot verify it matches your registration details.',
+      'Name on ID not clear',
+      'We could not clearly read a full name from this ID. Please upload a photo where the name is visible, or make sure Step 1 uses the same name printed on your ID.',
       '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm || '—') +
-      '<br><strong>What to do:</strong> Retake or re-upload a sharper photo where the name printed on the ID is fully visible.'
+      '<br><strong>Tip:</strong> Crop closer to the name fields (Surname / Given Name) and try again. Face quality is not blocking you.'
     );
-    showAlert('signup-alert', 'error', 'Name on ID not readable — see popup.');
+    showAlert('signup-alert', 'error', 'Name on ID not clear — see popup.');
+    // Keep idFile so user can retry without re-selecting if they only fix name — clear validation state only
+    idFile = null;
+    extractedIdInfo = null;
     return;
   }
 
   if (!nameCheck.match) {
     document.getElementById('id-extracted').style.display = 'none';
     idFile = null;
-    idHasFace = false;
     extractedIdInfo = null;
     document.getElementById('id-continue-btn').disabled = true;
     showValidationModal(
       'Name does not match ID',
-      'The full name you entered does not match the name detected on the government ID. Registration cannot continue until they match.',
+      'The name you entered does not match the name detected on the ID. Only a matching name can continue.',
       '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm) +
       '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId) +
       '<br><strong>Match score:</strong> ' + nameCheck.score + '%' +
-      '<br><br>Check spelling on Step 1, or upload the ID that belongs to the person whose name you registered.'
+      '<br><br>Fix the spelling on Step 1, or upload the ID that belongs to that name. Photo quality is not the issue here.'
     );
     showAlert('signup-alert', 'error', 'Credentials do not match the ID — see popup.');
     return;
   }
 
+  // Success — face quality is informational only
   extractedIdInfo = {
     fullName: nameFromId,
     formName: nameFromForm,
@@ -1256,7 +1272,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     idType,
     source: sourceLabel,
     faceQuality: faceQ,
-    autoDetected: !!(detection.type && detection.confidence >= 25),
+    autoDetected: !!(detection.type && detection.confidence >= 20),
     detectionConfidence: detection.confidence || 0,
     nameMatchScore: nameCheck.score
   };
@@ -1267,13 +1283,12 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     (extractedIdInfo.idType ? extractedIdInfo.idType + (extractedIdInfo.autoDetected ? ' (auto-matched)' : '') : '—');
   document.getElementById('id-source').textContent = sourceLabel || '—';
   document.getElementById('id-ocr-status').innerHTML =
-    `<i class="fas fa-shield-alt"></i> Face on ID · quality ${faceQ}% · document score ${idOcrScore}/100` +
-    ` · name match ${nameCheck.score}%` +
+    `<i class="fas fa-shield-alt"></i> Name match ${nameCheck.score}% · document score ${idOcrScore}/100` +
+    (idHasFace ? ` · face on ID ${faceQ}%` : ' · face not required for this step') +
     (extractedIdInfo.autoDetected ? ` · type matched automatically` : '');
   document.getElementById('id-extracted').style.display = 'block';
   document.getElementById('id-continue-btn').disabled = false;
 
-  // Clear upload validation state on success
   clearFieldError('id-file', 'err-id-upload');
   const uploadArea = document.getElementById('id-upload-area');
   if (uploadArea) uploadArea.classList.remove('is-invalid', 'shake');
@@ -1282,7 +1297,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   if (fnEl && fileObj) fnEl.textContent = fileObj.name || (sourceLabel === 'Camera' ? 'Camera capture' : 'Uploaded');
 
   showAlert('signup-alert', 'success',
-    'Valid ID accepted · name matched · detected as ' + idType +
+    'ID accepted · name matched to your credentials · type: ' + idType +
     '. Continue to live face scan.');
 }
 
@@ -1681,14 +1696,14 @@ function retakeFace() {
 
 /* ---------- Create account ---------- */
 async function handleSignup() {
-  if (!faceCaptured || !window._faceFile || !extractedIdInfo || !idHasFace) {
+  if (!faceCaptured || !window._faceFile || !extractedIdInfo) {
     const cam = await checkCameraAvailable();
     if (!cam.ok) {
       applyNoCameraUI('face');
       return;
     }
     showAlert('signup-alert', 'error',
-      'Please provide a valid ID and complete facial recognition first. A working camera is required to register.');
+      'Please complete ID name matching and live facial recognition first. A working camera is required for the face step.');
     return;
   }
 
