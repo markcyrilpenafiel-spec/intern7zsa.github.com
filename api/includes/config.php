@@ -22,7 +22,7 @@ define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_SECURE', 'tls');          // tls or ssl
 define('SMTP_USER', 'markcyrilpenafiel@gmail.com');   // ← change this
-define('SMTP_PASS', 'xexspzfbbkbqbhui');      // ← Gmail App Password
+define('SMTP_PASS', 'ovjjbvpmmasbxyoh');      // ← Gmail App Password
 define('SMTP_FROM_EMAIL', 'markcyrilpenafiel@gmail.com');
 define('SMTP_FROM_NAME', 'K-Tix Assist');
 
