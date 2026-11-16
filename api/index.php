@@ -83,17 +83,17 @@ if (isLoggedIn()) {
               </p>
               <div class="form-group">
                 <label>Last Name <span class="required">*</span></label>
-                <input type="text" class="form-control" id="signup-last-name" placeholder="last name" autocomplete="family-name">
+                <input type="text" class="form-control" id="signup-last-name" placeholder="Last name" autocomplete="family-name">
                 <div class="field-error" id="err-signup-last-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
               </div>
               <div class="form-group">
                 <label>First Name <span class="required">*</span></label>
-                <input type="text" class="form-control" id="signup-first-name" placeholder="first name" autocomplete="given-name">
+                <input type="text" class="form-control" id="signup-first-name" placeholder="First name" autocomplete="given-name">
                 <div class="field-error" id="err-signup-first-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
               </div>
               <div class="form-group">
                 <label>Middle Name <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">(optional if none on ID)</span></label>
-                <input type="text" class="form-control" id="signup-middle-name" placeholder="Baluca" autocomplete="additional-name">
+                <input type="text" class="form-control" id="signup-middle-name" placeholder="Middle name" autocomplete="additional-name">
                 <div class="field-error" id="err-signup-middle-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
               </div>
               <div class="form-group">
