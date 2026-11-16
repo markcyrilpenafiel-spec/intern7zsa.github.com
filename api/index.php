@@ -339,6 +339,23 @@ if (isLoggedIn()) {
     </div>
   </div>
 
+  <!-- Validation / mismatch modal (name vs ID, invalid ID, no camera) -->
+  <div class="modal-overlay" id="validation-modal">
+    <div class="modal validation-modal">
+      <div class="modal-header">
+        <h3 id="validation-modal-title"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px;"></i> Validation failed</h3>
+        <button class="modal-close" onclick="closeValidationModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="validation-modal-message" style="margin:0; line-height:1.55;"></p>
+        <div id="validation-modal-details" style="display:none; margin-top:1rem; padding:0.75rem 1rem; background:rgba(0,0,0,0.25); border-radius:8px; font-size:0.9rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-sm" onclick="closeValidationModal()">OK, try again</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/dist/face-api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="js/app.js"></script>
