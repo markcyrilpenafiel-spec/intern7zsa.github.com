@@ -979,12 +979,37 @@ function extractIdNumberFromText(text) {
     'COMMUNICATIONS', 'PRESIDENTIAL', 'APO', 'UNIT'
   ]);
 
-  // Philippine LTO license number: e.g. G11-24-004792, N03-12-345678
-  // Allow OCR dropping zeros / extra spaces: G11-24-004792 or G11 24 004792
-  const ltoAll = t.match(/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{4,7}\b/g);
-  if (ltoAll && ltoAll.length) {
-    ltoAll.sort((a, b) => b.length - a.length);
-    return ltoAll[0].replace(/\s/g, '').replace(/([A-Z]\d{2})(\d{2})/, '$1-$2').replace(/([A-Z]\d{2}-\d{2})(\d)/, '$1-$2');
+  // Philippine LTO license number: G11-24-004792 (letter + 2 digits - 2 digits - 5..7 digits)
+  const ltoFlexible = t.match(/\b([A-Z])\s*([0-9O]{2})\s*[-–]?\s*([0-9O]{2})\s*[-–]?\s*([0-9O]{5,7})\b/g);
+  if (ltoFlexible && ltoFlexible.length) {
+    const norm = (s) => s.toUpperCase().replace(/O/g, '0').replace(/[^A-Z0-9]/g, '');
+    let best = '';
+    for (const m of ltoFlexible) {
+      const n = norm(m);
+      // Expect like G1124004792 (1 letter + 10 digits) or similar
+      const mm = n.match(/^([A-Z])(\d{2})(\d{2})(\d{5,7})$/);
+      if (mm) {
+        const formatted = mm[1] + mm[2] + '-' + mm[3] + '-' + mm[4];
+        if (formatted.length > best.length) best = formatted;
+      }
+    }
+    if (best) return best;
+  }
+  // Partial fallback G11-24 + optional tail
+  const ltoPartial = t.match(/\b([A-Z])\s*([0-9O]{2})\s*[-–]?\s*([0-9O]{2})\b/);
+  if (ltoPartial) {
+    const a = ltoPartial[1] + ltoPartial[2].replace(/O/g, '0') + '-' + ltoPartial[3].replace(/O/g, '0');
+    const rest = t.slice(t.indexOf(ltoPartial[0]) + ltoPartial[0].length, t.indexOf(ltoPartial[0]) + ltoPartial[0].length + 16);
+    const tail = rest.match(/\s*[-–]?\s*([0-9O]{5,7})\b/);
+    if (tail) return a + '-' + tail[1].replace(/O/g, '0');
+    return a;
+  }
+  // Last resort: dig for patterns like G11-24-004792 hidden in noise
+  const buried = t.replace(/[^A-Z0-9]/g, ' ').match(/[A-Z][0-9O]{2}\s*[0-9O]{2}\s*[0-9O]{5,7}/);
+  if (buried) {
+    const n = buried[0].toUpperCase().replace(/O/g, '0').replace(/\s/g, '');
+    const mm = n.match(/^([A-Z])(\d{2})(\d{2})(\d{5,7})$/);
+    if (mm) return mm[1] + mm[2] + '-' + mm[3] + '-' + mm[4];
   }
 
   // PhilSys-style 4-4-4-4
@@ -1177,19 +1202,47 @@ function normalizePersonName(name) {
     .trim();
 }
 
-/** Simple edit distance for OCR typos (e.g. PENAFIEL vs PENAFIE1) */
+/** Levenshtein distance (capped) for OCR typos: PENAFIEL↔PERAPIEL, BALUCA↔BALUGA */
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a || !b) return 99;
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 3) return 99;
+  const row = new Array(n + 1);
+  for (let j = 0; j <= n; j++) row[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = row[j];
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + cost);
+      prev = tmp;
+    }
+  }
+  return row[n];
+}
+
 function tokenSimilar(a, b) {
   if (a === b) return true;
   if (!a || !b) return false;
-  if (a.length >= 3 && b.length >= 3 && (a.startsWith(b.slice(0, 3)) || b.startsWith(a.slice(0, 3)))) {
-    // Allow small length difference / 1–2 char noise
-    const maxLen = Math.max(a.length, b.length);
-    const minLen = Math.min(a.length, b.length);
-    if (maxLen - minLen > 2) return false;
-    let diff = 0;
-    for (let i = 0; i < minLen; i++) if (a[i] !== b[i]) diff++;
-    diff += maxLen - minLen;
-    return diff <= 2;
+  // Normalize common OCR letter swaps
+  const norm = (s) => s
+    .replace(/0/g, 'O')
+    .replace(/1/g, 'I')
+    .replace(/5/g, 'S')
+    .replace(/8/g, 'B');
+  const aa = norm(a), bb = norm(b);
+  if (aa === bb) return true;
+  const maxLen = Math.max(aa.length, bb.length);
+  if (maxLen < 3) return false;
+  const dist = editDistance(aa, bb);
+  // Allow 1 edit for short names, 2 for longer (PERAPIEL vs PENAFIEL = 2)
+  const allowed = maxLen >= 7 ? 2 : (maxLen >= 5 ? 1 : 0);
+  if (dist <= allowed) return true;
+  // Prefix fallback
+  if (maxLen >= 5 && (aa.startsWith(bb.slice(0, 4)) || bb.startsWith(aa.slice(0, 4)))) {
+    return dist <= 2;
   }
   return false;
 }
@@ -1266,7 +1319,11 @@ function closeValidationModal() {
 
 /** Build a high-contrast, upscaled canvas for better OCR on ID photos */
 function buildOcrCanvas(sourceCanvas) {
-  const scale = sourceCanvas.width < 900 ? 2.2 : (sourceCanvas.width < 1400 ? 1.6 : 1.2);
+  // Tiny uploads (e.g. 383px) need aggressive upscale for Tesseract
+  const scale = sourceCanvas.width < 500 ? 3.5
+    : sourceCanvas.width < 900 ? 2.5
+    : sourceCanvas.width < 1400 ? 1.8
+    : 1.3;
   const w = Math.round(sourceCanvas.width * scale);
   const h = Math.round(sourceCanvas.height * scale);
   const out = document.createElement('canvas');
@@ -1319,8 +1376,17 @@ function isGarbageName(name) {
     'VILLAGE', 'ADDRESS', 'NATIONALITY', 'LICENSE', 'DRIVER', 'DRIVERS'
   ]);
   const noiseHits = tokens.filter(t => noise.has(t) || ID_OCR_STOPWORDS.has(t)).length;
-  if (noiseHits >= Math.ceil(tokens.length * 0.4)) return true;
+  if (noiseHits >= Math.ceil(tokens.length * 0.35)) return true;
   if (!tokens.some(t => t.length >= 4)) return true;
+  // Random OCR gibberish often has unusual letter patterns / no vowel balance
+  const weird = tokens.filter(t => {
+    if (t.length < 4) return false;
+    const vowels = (t.match(/[AEIOU]/g) || []).length;
+    // No vowels or almost no vowels → not a normal PH name token
+    if (vowels === 0 && t.length >= 4) return true;
+    return false;
+  });
+  if (weird.length >= Math.ceil(tokens.length * 0.5)) return true;
   return false;
 }
 
@@ -1375,6 +1441,13 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
           }
         } catch (e2) { /* ignore */ }
       }
+      // Debug: always log OCR so mismatches can be diagnosed in DevTools
+      try {
+        console.log('[K-Tix OCR raw]', idOcrText);
+        console.log('[K-Tix OCR name extract]', extractNameFromOcrText(idOcrText));
+        console.log('[K-Tix form name]', getSignupFullName());
+        window.__KTIX_LAST_OCR = idOcrText;
+      } catch (eLog) { /* ignore */ }
     } else {
       console.warn('Tesseract.js not loaded');
       idOcrText = '';
@@ -1506,15 +1579,19 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   const needsConfirm = !nameCheck.match;
   // Always keep the uploaded file when OCR is just unclear (customer path)
-  // Display name: always sync with Step 1 credentials when OCR name is address/junk.
-  // Only show OCR name if it looks like a real person name (not CITY / address).
-  const displayName =
-    (nameFromId && !isGarbageName(nameFromId) && !isAddressLikeText(nameFromId))
-      ? nameFromId
-      : nameFromForm;
+  // ALWAYS show Step 1 credentials as Full Name (customer-facing sync).
+  // OCR text is only used for match checks — never shown when it is noise like
+  // "CANT TIGRNE FW MAME" or address lines.
+  const ocrNameLooksReal =
+    nameFromId &&
+    !isGarbageName(nameFromId) &&
+    !isAddressLikeText(nameFromId) &&
+    namesMatch(nameFromForm, nameFromId).match;
+  const displayName = nameFromForm; // always sync with what the customer typed
 
   extractedIdInfo = {
     fullName: displayName,
+    ocrName: ocrNameLooksReal ? nameFromId : '',
     formName: nameFromForm,
     idNumber,
     idType,
@@ -1527,7 +1604,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   };
 
   document.getElementById('id-name').textContent = extractedIdInfo.fullName || '—';
-  document.getElementById('id-number').textContent = extractedIdInfo.idNumber || '—';
+  document.getElementById('id-number').textContent = extractedIdInfo.idNumber || 'Not clearly readable';
   document.getElementById('id-type').textContent =
     (extractedIdInfo.idType ? extractedIdInfo.idType + (extractedIdInfo.autoDetected ? ' (auto-matched)' : '') : '—');
   document.getElementById('id-source').textContent = sourceLabel || '—';
@@ -1596,16 +1673,17 @@ function processIdImageFile(file, sourceLabel) {
         return;
       }
       const canvas = document.createElement('canvas');
-      // Keep more resolution for OCR (phone photos of IDs need detail)
-      const max = 1800;
+      // Keep more resolution for OCR. Sample IDs are often ~400px — upscale hard.
+      const max = 2000;
       let w = img.width, h = img.height;
       if (w > max || h > max) {
         const r = Math.min(max / w, max / h);
         w = Math.round(w * r); h = Math.round(h * r);
       }
-      // Upscale very small images so OCR has more pixels
-      if (w < 800 && w > 0) {
-        const r = 800 / w;
+      // Target at least 1400px on the long side for Tesseract
+      const longSide = Math.max(w, h);
+      if (longSide > 0 && longSide < 1400) {
+        const r = 1400 / longSide;
         w = Math.round(w * r); h = Math.round(h * r);
       }
       canvas.width = w; canvas.height = h;
