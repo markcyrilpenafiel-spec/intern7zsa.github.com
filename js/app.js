@@ -979,9 +979,13 @@ function extractIdNumberFromText(text) {
     'COMMUNICATIONS', 'PRESIDENTIAL', 'APO', 'UNIT'
   ]);
 
-  // Philippine LTO license number: e.g. G11-24-664792, N03-12-345678
-  const lto = t.match(/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{5,7}\b/);
-  if (lto) return lto[0].replace(/\s/g, '');
+  // Philippine LTO license number: e.g. G11-24-004792, N03-12-345678
+  // Allow OCR dropping zeros / extra spaces: G11-24-004792 or G11 24 004792
+  const ltoAll = t.match(/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{4,7}\b/g);
+  if (ltoAll && ltoAll.length) {
+    ltoAll.sort((a, b) => b.length - a.length);
+    return ltoAll[0].replace(/\s/g, '').replace(/([A-Z]\d{2})(\d{2})/, '$1-$2').replace(/([A-Z]\d{2}-\d{2})(\d)/, '$1-$2');
+  }
 
   // PhilSys-style 4-4-4-4
   const philsys = t.match(/\b\d{4}[-\s]\d{4}[-\s]\d{4}[-\s]\d{4}\b/);
@@ -1020,6 +1024,9 @@ const ID_OCR_STOPWORDS = new Set([
   'EXPIRES', 'VALID', 'UNTIL', 'SIGNATURE', 'SIGNATURES', 'BLOOD', 'TYPE',
   'HEIGHT', 'WEIGHT', 'EYES', 'HAIR', 'AGENCY', 'CODE', 'NUMBER', 'NO',
   'NAME', 'LAST', 'FIRST', 'MIDDLE', 'SURNAME', 'GIVEN', 'NAMES', 'FULL',
+  'CITY', 'OPON', 'LAPU', 'LAPULAPU', 'CEBU', 'MANILA', 'QUEZON', 'BARANGAY', 'BRGY',
+  'VILLAGE', 'STREET', 'ROAD', 'AVENUE', 'BLOCK', 'LOT', 'PUROK', 'SITIO', 'MARIBAGO',
+  'NATIONALITY', 'WEIGHT', 'HEIGHT', 'EYES', 'HAIR', 'STONE', 'ADDRESS',
   'THE', 'OF', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'ARE', 'WAS',
   'BE', 'OR', 'ON', 'TO', 'IN', 'AT', 'BY', 'AS', 'AN', 'A'
 ]);
@@ -1107,7 +1114,10 @@ function extractNameFromOcrText(text) {
     const stopHits = words.filter(w => ID_OCR_STOPWORDS.has(w)).length;
     if (stopHits >= Math.ceil(words.length / 2)) continue;
     if (words.every(w => w.length <= 2)) continue;
-    candidates.push(words.filter(w => !ID_OCR_STOPWORDS.has(w)).join(' '));
+    const joined = words.filter(w => !ID_OCR_STOPWORDS.has(w)).join(' ');
+    if (isAddressLikeText(joined)) continue;
+    if (/\b(CITY|OPON|CEBU|MANILA|VILLAGE|BARANGAY|MARIBAGO|LAPU)\b/.test(joined)) continue;
+    candidates.push(joined);
   }
   if (candidates.length) {
     candidates.sort((a, b) => b.length - a.length);
@@ -1284,18 +1294,32 @@ function buildOcrCanvas(sourceCanvas) {
 }
 
 /** Reject OCR "names" that are clearly not person names */
+function isAddressLikeText(name) {
+  if (!name) return false;
+  const u = normalizePersonName(name);
+  // Location / address markers common on PH IDs
+  const place = /\b(CITY|OPON|LAPU|LAPULAPU|CEBU|MANILA|QUEZON|BARANGAY|BRGY|VILLAGE|STREET|ST|ROAD|AVE|AVENUE|BLOCK|LOT|PUROK|SITIO|PROVINCE|MUNICIPALITY|MARIBAGO|STONE|NATIONALITY|WEIGHT|HEIGHT|EYES|HAIR|AGENCY|ADDRESS)\b/;
+  if (place.test(u)) return true;
+  // Looks like street numbers
+  if (/\b\d{1,4}[\s\-]\d{0,4}\b/.test(name) && /\b(CITY|ST|STREET|VILLAGE|BRGY)\b/.test(u)) return true;
+  return false;
+}
+
 function isGarbageName(name) {
   if (!name || name.trim().length < 3) return true;
+  if (isAddressLikeText(name)) return true;
   const tokens = normalizePersonName(name).split(' ').filter(Boolean);
   if (!tokens.length) return true;
-  // Too many very short tokens / nonsense
   const short = tokens.filter(t => t.length <= 2).length;
   if (short >= tokens.length) return true;
-  // Common OCR noise words from LTO cards / backgrounds
-  const noise = new Set(['LZ', 'USE', 'GROW', 'CIS', 'VAT', 'WANMASO', 'NONE', 'NBI', 'AGENCY', 'CODE', 'TYPE', 'BLACK', 'HEIGHT', 'WEIGHT', 'SEX', 'MALE', 'FEMALE', 'PHL', 'LTO', 'REPUBLIC']);
+  const noise = new Set([
+    'LZ', 'USE', 'GROW', 'CIS', 'VAT', 'WANMASO', 'NONE', 'NBI', 'AGENCY', 'CODE',
+    'TYPE', 'BLACK', 'HEIGHT', 'WEIGHT', 'SEX', 'MALE', 'FEMALE', 'PHL', 'LTO',
+    'REPUBLIC', 'CITY', 'OPON', 'LAPU', 'LAPULAPU', 'CEBU', 'MARIBAGO', 'STONE',
+    'VILLAGE', 'ADDRESS', 'NATIONALITY', 'LICENSE', 'DRIVER', 'DRIVERS'
+  ]);
   const noiseHits = tokens.filter(t => noise.has(t) || ID_OCR_STOPWORDS.has(t)).length;
-  if (noiseHits >= Math.ceil(tokens.length * 0.5)) return true;
-  // No token longer than 3 chars that looks like a name
+  if (noiseHits >= Math.ceil(tokens.length * 0.4)) return true;
   if (!tokens.some(t => t.length >= 4)) return true;
   return false;
 }
@@ -1482,8 +1506,15 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   const needsConfirm = !nameCheck.match;
   // Always keep the uploaded file when OCR is just unclear (customer path)
+  // Display name: always sync with Step 1 credentials when OCR name is address/junk.
+  // Only show OCR name if it looks like a real person name (not CITY / address).
+  const displayName =
+    (nameFromId && !isGarbageName(nameFromId) && !isAddressLikeText(nameFromId))
+      ? nameFromId
+      : nameFromForm;
+
   extractedIdInfo = {
-    fullName: (!isGarbageName(nameFromId) && nameFromId) ? nameFromId : nameFromForm,
+    fullName: displayName,
     formName: nameFromForm,
     idNumber,
     idType,
