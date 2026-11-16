@@ -31,6 +31,16 @@ const FACE_DETECT_MIN_SCORE = 0.5;
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model';
 
 /* ---------- UI helpers ---------- */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showPanel(name) {
   document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById('panel-' + name);
@@ -47,26 +57,14 @@ function showPanel(name) {
   });
 }
 
-function escapeHTML(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[ch]);
-}
-
 function showAlert(containerId, type, message) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  const allowedTypes = ['success', 'error', 'warning', 'info'];
-  const safeType = allowedTypes.includes(type) ? type : 'info';
   const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-  const alert = document.createElement('div');
-  alert.className = `alert alert-${safeType}`;
-  const icon = document.createElement('i');
-  icon.className = `fas fa-${icons[safeType]}`;
-  const text = document.createElement('span');
-  text.textContent = String(message ?? '');
-  alert.append(icon, document.createTextNode(' '), text);
-  el.replaceChildren(alert);
+  const safeType = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+  const safeIcon = icons[safeType] || 'info-circle';
+  // Escape user/server messages to prevent stored/reflected XSS
+  el.innerHTML = `<div class="alert alert-${safeType}"><i class="fas fa-${safeIcon}"></i> ${escapeHtml(message)}</div>`;
 }
 
 function setFieldError(inputId, message, extraTargetId) {
@@ -82,9 +80,14 @@ function setFieldError(inputId, message, extraTargetId) {
     const span = err.querySelector('span');
     if (span) span.textContent = message;
     else {
-      const safeSpan = document.createElement('span');
-      safeSpan.textContent = String(message ?? '');
-      err.appendChild(safeSpan);
+      err.textContent = '';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-exclamation-circle';
+      const s = document.createElement('span');
+      s.textContent = message;
+      err.appendChild(icon);
+      err.appendChild(document.createTextNode(' '));
+      err.appendChild(s);
     }
     err.classList.add('visible');
   }
@@ -114,9 +117,14 @@ function setGroupError(groupId, errId, message) {
     const span = err.querySelector('span');
     if (span) span.textContent = message;
     else {
-      const safeSpan = document.createElement('span');
-      safeSpan.textContent = String(message ?? '');
-      err.appendChild(safeSpan);
+      err.textContent = '';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-exclamation-circle';
+      const s = document.createElement('span');
+      s.textContent = message;
+      err.appendChild(icon);
+      err.appendChild(document.createTextNode(' '));
+      err.appendChild(s);
     }
     err.classList.add('visible');
   }
@@ -516,7 +524,7 @@ async function captureLoginFace() {
       stopLoginFace();
     } else {
       status.className = 'face-status error';
-      status.textContent = data.message || 'Face not recognized';
+      status.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHtml(data.message || 'Face not recognized')}`;
       video.style.filter = 'blur(18px)';
       showAlert('login-alert', 'error', data.message || 'Face verification failed.');
     }
@@ -669,9 +677,17 @@ async function goSignupStep3() {
   }
 
   // Face verification requires a camera — block registration if none is available
+  // (e.g. PisoNet / cafe PCs often have no camera or blocked access)
   const cam = await checkCameraAvailable();
   if (!cam.ok) {
-    showAlert('signup-alert', 'error', cam.reason || NO_CAMERA_ALERT);
+    showValidationModal(
+      'No camera available',
+      cam.reason || 'A working camera is required for facial recognition. Without it you cannot complete registration.',
+      '<strong>Common on PisoNet / public PCs:</strong> no webcam, camera disabled by antivirus, or permission denied.<br>' +
+      '<strong>What to do:</strong> Use a phone or computer with a working camera and allow camera access when the browser asks.'
+    );
+    showAlert('signup-alert', 'error', 'Camera required — registration cannot continue without one.');
+    // Keep user on step 2; do not advance
     return;
   }
 
@@ -684,6 +700,12 @@ async function goSignupStep3() {
   const cam2 = await checkCameraAvailable();
   if (!cam2.ok) {
     applyNoCameraUI('face');
+    showValidationModal(
+      'No camera available',
+      cam2.reason || 'Camera is required for Step 3 (face scan). You cannot create an account without it.',
+      'Go back and try again from a device with a working camera (not a typical PisoNet terminal without webcam).'
+    );
+    document.getElementById('signup-submit-btn').disabled = true;
   } else {
     // Reset start button if it was previously disabled
     const startBtn = document.getElementById('start-camera-btn');
@@ -910,6 +932,155 @@ function extractIdNumberFromText(text) {
   return 'ID-' + Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Date.now().toString().slice(-4);
 }
 
+/* ---------- Name extraction & matching (Step 1 form vs ID OCR) ---------- */
+const ID_OCR_STOPWORDS = new Set([
+  'REPUBLIC', 'PHILIPPINES', 'PHILIPPINE', 'NATIONAL', 'IDENTITY', 'CARD',
+  'PASSPORT', 'DRIVER', 'DRIVERS', 'LICENSE', 'LICENCE', 'PHILSYS', 'PHIL',
+  'SYSTEM', 'IDENTIFICATION', 'DEPARTMENT', 'TRANSPORTATION', 'LAND',
+  'TRAFFIC', 'AUTHORITY', 'LTO', 'DFA', 'PSA', 'OFFICIAL', 'GOVERNMENT',
+  'DATE', 'BIRTH', 'SEX', 'MALE', 'FEMALE', 'ADDRESS', 'ISSUED', 'EXPIRY',
+  'EXPIRES', 'VALID', 'UNTIL', 'SIGNATURE', 'SIGNATURES', 'BLOOD', 'TYPE',
+  'HEIGHT', 'WEIGHT', 'EYES', 'HAIR', 'AGENCY', 'CODE', 'NUMBER', 'NO',
+  'NAME', 'LAST', 'FIRST', 'MIDDLE', 'SURNAME', 'GIVEN', 'NAMES', 'FULL',
+  'THE', 'OF', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'ARE', 'WAS',
+  'BE', 'OR', 'ON', 'TO', 'IN', 'AT', 'BY', 'AS', 'AN', 'A'
+]);
+
+/**
+ * Try to pull a person name from OCR text (PH ID layouts).
+ * Returns best-effort full name string or empty string.
+ */
+function extractNameFromOcrText(text) {
+  if (!text || text.length < 4) return '';
+
+  const lines = text
+    .split(/\r?\n/)
+    .map(l => l.replace(/[^\wÀ-ÿñÑ\s.'\-]/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(l => l.length >= 3);
+
+  // 1) Labelled fields: "Last Name: CRUZ", "Given Names: JUAN", etc.
+  let last = '', first = '', middle = '';
+  for (const line of lines) {
+    const u = line.toUpperCase();
+    const mLast = u.match(/(?:LAST\s*NAME|SURNAME|APELYIDO)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{1,40})/);
+    if (mLast && !last) last = mLast[1].trim();
+    const mFirst = u.match(/(?:GIVEN\s*NAMES?|FIRST\s*NAME|PANGALAN)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{1,40})/);
+    if (mFirst && !first) first = mFirst[1].trim();
+    const mMid = u.match(/(?:MIDDLE\s*NAME|M\.?\s*I\.?)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{0,30})/);
+    if (mMid && !middle) middle = mMid[1].trim();
+    const mFull = u.match(/(?:FULL\s*NAME|NAME)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{3,50})/);
+    if (mFull && !last && !first) {
+      const parts = mFull[1].trim().split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) return parts.join(' ');
+    }
+  }
+  if (last || first) {
+    return [first, middle, last].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  // 2) ALL-CAPS multi-word lines that look like names (exclude stopwords-heavy lines)
+  const candidates = [];
+  for (const line of lines) {
+    if (!/^[A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]+$/.test(line)) continue;
+    const words = line.split(/\s+/).filter(w => w.length > 1);
+    if (words.length < 2 || words.length > 5) continue;
+    const stopHits = words.filter(w => ID_OCR_STOPWORDS.has(w)).length;
+    if (stopHits >= Math.ceil(words.length / 2)) continue;
+    if (words.every(w => w.length <= 2)) continue;
+    candidates.push(line);
+  }
+  if (candidates.length) {
+    // Prefer longer plausible names
+    candidates.sort((a, b) => b.length - a.length);
+    return candidates[0];
+  }
+
+  return '';
+}
+
+/** Normalize for comparison: uppercase, strip accents/punctuation, collapse spaces */
+function normalizePersonName(name) {
+  if (!name) return '';
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-ZÑ\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Fuzzy name match: shared significant tokens.
+ * Returns { match: boolean, score: 0-100, formTokens, ocrTokens, shared }
+ */
+function namesMatch(formName, ocrName) {
+  const a = normalizePersonName(formName);
+  const b = normalizePersonName(ocrName);
+  if (!a || !b) return { match: false, score: 0, formTokens: [], ocrTokens: [], shared: [] };
+
+  const tokenFilter = (w) => w.length >= 2 && !ID_OCR_STOPWORDS.has(w);
+  const formTokens = a.split(' ').filter(tokenFilter);
+  const ocrTokens = b.split(' ').filter(tokenFilter);
+  if (!formTokens.length || !ocrTokens.length) {
+    return { match: false, score: 0, formTokens, ocrTokens, shared: [] };
+  }
+
+  const shared = [];
+  for (const ft of formTokens) {
+    for (const ot of ocrTokens) {
+      if (ft === ot || (ft.length >= 4 && ot.startsWith(ft.slice(0, 4))) || (ot.length >= 4 && ft.startsWith(ot.slice(0, 4)))) {
+        if (!shared.includes(ft)) shared.push(ft);
+        break;
+      }
+    }
+  }
+
+  // Score: how many form name tokens appear on the ID
+  const score = Math.round((shared.length / formTokens.length) * 100);
+  // Require at least 2 shared tokens, or 1 if form only has 1–2 names and exact match on a long token
+  let match = false;
+  if (formTokens.length >= 2) {
+    match = shared.length >= 2 || (shared.length >= 1 && score >= 50 && shared[0].length >= 5);
+  } else {
+    match = shared.length >= 1 && shared[0].length >= 4;
+  }
+  // High bar if OCR name is very short
+  if (ocrTokens.length === 1 && formTokens.length >= 2) {
+    match = shared.length >= 1 && score >= 40;
+  }
+
+  return { match, score, formTokens, ocrTokens, shared };
+}
+
+function showValidationModal(title, message, detailsHtml) {
+  const overlay = document.getElementById('validation-modal');
+  if (!overlay) {
+    showAlert('signup-alert', 'error', message);
+    return;
+  }
+  const titleEl = document.getElementById('validation-modal-title');
+  const msgEl = document.getElementById('validation-modal-message');
+  const detEl = document.getElementById('validation-modal-details');
+  if (titleEl) titleEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#f59e0b;margin-right:8px;"></i> ' + escapeHtml(title);
+  if (msgEl) msgEl.textContent = message;
+  if (detEl) {
+    if (detailsHtml) {
+      detEl.style.display = 'block';
+      detEl.innerHTML = detailsHtml;
+    } else {
+      detEl.style.display = 'none';
+      detEl.innerHTML = '';
+    }
+  }
+  overlay.classList.add('show');
+}
+
+function closeValidationModal() {
+  const overlay = document.getElementById('validation-modal');
+  if (overlay) overlay.classList.remove('show');
+}
+
 async function processIdCanvas(canvas, sourceLabel, fileObj) {
   idFile = fileObj;
   idCaptureSource = sourceLabel === 'Camera' ? 'camera' : 'upload';
@@ -932,9 +1103,15 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   } catch (e) { /* ignore */ }
 
   if (!faceResult || !faceResult.detected || !faceResult.descriptor) {
-    showAlert('signup-alert', 'error',
-      'No face detected on this image. Point the camera at (or upload) a clear photo of a real government ID that shows the photo of the ID holder.');
     idFile = null;
+    idHasFace = false;
+    document.getElementById('id-continue-btn').disabled = true;
+    showValidationModal(
+      'Not a valid ID photo',
+      'No face was detected on this image. A real government ID must show the holder’s photo.',
+      'Upload or capture a clear photo of your National ID, Passport, Driver\'s License, or PhilSys ID — not a selfie and not a document without a face photo.'
+    );
+    showAlert('signup-alert', 'error', 'No face on ID — see popup.');
     return;
   }
   idHasFace = true;
@@ -942,10 +1119,15 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   const faceQ = Math.round(faceResult.score * 100);
 
   if (faceQ < 40) {
-    showAlert('signup-alert', 'error',
-      'Face on the ID is too unclear (quality ' + faceQ + '%). Use better lighting and make sure the ID photo is sharp and fully visible.');
     idFile = null;
     idHasFace = false;
+    document.getElementById('id-continue-btn').disabled = true;
+    showValidationModal(
+      'ID photo too unclear',
+      'Face on the ID is too unclear (quality ' + faceQ + '%). The system cannot verify this document.',
+      'Use better lighting and make sure the ID photo is sharp and fully visible, then try again.'
+    );
+    showAlert('signup-alert', 'error', 'ID face quality too low — see popup.');
     return;
   }
 
@@ -992,12 +1174,17 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   // Reject if document does not look like any government ID
   if (idOcrScore < 25) {
-    showAlert('signup-alert', 'error',
-      'This does not look like a valid government ID. Text is missing or does not match a National ID, Passport, Driver\'s License, or PhilSys ID. Please try again with a clearer photo.');
     document.getElementById('id-extracted').style.display = 'none';
     idFile = null;
     idHasFace = false;
     extractedIdInfo = null;
+    document.getElementById('id-continue-btn').disabled = true;
+    showValidationModal(
+      'Invalid ID',
+      'This does not look like a valid government ID. The text is missing or does not match a National ID, Passport, Driver\'s License, or PhilSys ID.',
+      '<strong>What to do:</strong> Upload a clearer, well-lit photo of your real government ID with the face and text fully visible.'
+    );
+    showAlert('signup-alert', 'error', 'Invalid ID — see popup for details.');
     return;
   }
 
@@ -1007,17 +1194,56 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     setSelectedIdType(idType);
   }
 
-  const nameFromForm = document.getElementById('signup-name').value.trim() || 'Detected Name';
+  const nameFromForm = document.getElementById('signup-name').value.trim();
+  const nameFromId = extractNameFromOcrText(idOcrText);
   const idNumber = extractIdNumberFromText(idOcrText) || 'Not clearly readable';
 
+  // 4) Match Step 1 credentials (full name) against name read from the ID
+  const nameCheck = namesMatch(nameFromForm, nameFromId || '');
+  if (!nameFromId) {
+    document.getElementById('id-extracted').style.display = 'none';
+    idFile = null;
+    idHasFace = false;
+    extractedIdInfo = null;
+    document.getElementById('id-continue-btn').disabled = true;
+    showValidationModal(
+      'Could not read name on ID',
+      'The system could not clearly read a full name from this ID photo. Without a readable name we cannot verify it matches your registration details.',
+      '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm || '—') +
+      '<br><strong>What to do:</strong> Retake or re-upload a sharper photo where the name printed on the ID is fully visible.'
+    );
+    showAlert('signup-alert', 'error', 'Name on ID not readable — see popup.');
+    return;
+  }
+
+  if (!nameCheck.match) {
+    document.getElementById('id-extracted').style.display = 'none';
+    idFile = null;
+    idHasFace = false;
+    extractedIdInfo = null;
+    document.getElementById('id-continue-btn').disabled = true;
+    showValidationModal(
+      'Name does not match ID',
+      'The full name you entered does not match the name detected on the government ID. Registration cannot continue until they match.',
+      '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm) +
+      '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId) +
+      '<br><strong>Match score:</strong> ' + nameCheck.score + '%' +
+      '<br><br>Check spelling on Step 1, or upload the ID that belongs to the person whose name you registered.'
+    );
+    showAlert('signup-alert', 'error', 'Credentials do not match the ID — see popup.');
+    return;
+  }
+
   extractedIdInfo = {
-    fullName: nameFromForm,
+    fullName: nameFromId,
+    formName: nameFromForm,
     idNumber,
     idType,
     source: sourceLabel,
     faceQuality: faceQ,
-    autoDetected: !!detection.type,
-    detectionConfidence: detection.confidence || 0
+    autoDetected: !!(detection.type && detection.confidence >= 25),
+    detectionConfidence: detection.confidence || 0,
+    nameMatchScore: nameCheck.score
   };
 
   document.getElementById('id-name').textContent = extractedIdInfo.fullName || '—';
@@ -1027,6 +1253,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   document.getElementById('id-source').textContent = sourceLabel || '—';
   document.getElementById('id-ocr-status').innerHTML =
     `<i class="fas fa-shield-alt"></i> Face on ID · quality ${faceQ}% · document score ${idOcrScore}/100` +
+    ` · name match ${nameCheck.score}%` +
     (extractedIdInfo.autoDetected ? ` · type matched automatically` : '');
   document.getElementById('id-extracted').style.display = 'block';
   document.getElementById('id-continue-btn').disabled = false;
@@ -1040,8 +1267,8 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   if (fnEl && fileObj) fnEl.textContent = fileObj.name || (sourceLabel === 'Camera' ? 'Camera capture' : 'Uploaded');
 
   showAlert('signup-alert', 'success',
-    'Valid ID accepted' + (extractedIdInfo.autoDetected ? ` · detected as <strong>${idType}</strong>` : '') +
-    '. Face found on document and ID text verified. Continue to live face match.');
+    'Valid ID accepted · name matched · detected as ' + idType +
+    '. Continue to live face scan.');
 }
 
 function processIdImageFile(file, sourceLabel) {
