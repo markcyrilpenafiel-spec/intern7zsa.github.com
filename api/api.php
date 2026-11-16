@@ -19,10 +19,11 @@ switch ($action) {
         if (!$email || !$password) {
             jsonResponse(['ok' => false, 'message' => 'Email and password are required.'], 400);
         }
-        if (!$policies) {
-            jsonResponse(['ok' => false, 'message' => 'You must accept the Terms of Service & Privacy Policy to log in.'], 400);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(['ok' => false, 'message' => 'Please enter a valid email address.'], 400);
         }
 
+        // Terms acceptance belongs to account creation, not routine sign-in.
         $user = findUserByEmail($email);
         if (!$user || !password_verify($password, $user['password'])) {
             jsonResponse(['ok' => false, 'message' => 'Invalid email or password.'], 401);
@@ -45,14 +46,13 @@ switch ($action) {
             ], 403);
         }
 
+        // Rotate the session identifier after successful authentication.
+        session_regenerate_id(true);
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['name'] = $user['name'];
 
-        if ($remember) {
-            setcookie('ktix_remember', bin2hex(random_bytes(16)), time() + 60 * 60 * 24 * 30, '/', '', false, true);
-        }
-
+        // Persistent "Remember me" is not implemented; do not issue a fake token.
         $redirect = roleDashboard($user['role']);
         jsonResponse([
             'ok' => true,
@@ -71,12 +71,15 @@ switch ($action) {
         if (!$email) {
             jsonResponse(['ok' => false, 'message' => 'Email is required for Face ID.'], 400);
         }
-        if (!$policies) {
-            jsonResponse(['ok' => false, 'message' => 'You must accept the Terms of Service & Privacy Policy.'], 400);
-        }
+        // Terms acceptance belongs to account creation, not routine sign-in.
         $liveEmb = json_decode($embeddingRaw, true);
-        if (!is_array($liveEmb) || count($liveEmb) < 64) {
+        if (!is_array($liveEmb) || count($liveEmb) !== 128) {
             jsonResponse(['ok' => false, 'message' => 'Invalid face embedding. Please try again.'], 400);
+        }
+        foreach ($liveEmb as $value) {
+            if (!is_numeric($value) || !is_finite((float)$value)) {
+                jsonResponse(['ok' => false, 'message' => 'Invalid face embedding. Please try again.'], 400);
+            }
         }
         $liveEmb = array_map('floatval', $liveEmb);
 
@@ -102,16 +105,20 @@ switch ($action) {
         }
 
         $stored = $user['face_embedding'] ?? null;
-        if (!$stored || !is_array($stored) || count($stored) < 64) {
+        if (!is_array($stored) || count($stored) !== 128) {
             jsonResponse([
                 'ok' => false,
-                'message' => 'No face profile enrolled for this account. Use password login, or re-register as customer to enroll Face ID.'
+                'message' => 'No valid face profile is enrolled for this account. Use password login.'
             ], 400);
+        }
+        foreach ($stored as $value) {
+            if (!is_numeric($value) || !is_finite((float)$value)) {
+                jsonResponse(['ok' => false, 'message' => 'Stored face profile is invalid. Use password login.'], 400);
+            }
         }
 
         $sum = 0.0;
-        $n = min(count($stored), count($liveEmb));
-        for ($i = 0; $i < $n; $i++) {
+        for ($i = 0; $i < 128; $i++) {
             $d = (float)$stored[$i] - (float)$liveEmb[$i];
             $sum += $d * $d;
         }
@@ -122,19 +129,18 @@ switch ($action) {
         if ($distance > $threshold) {
             jsonResponse([
                 'ok' => false,
-                'message' => 'Face not recognized. Distance ' . round($distance, 3) . ' exceeds threshold. Try better lighting or use password.',
+                'message' => 'Face not recognized. Try again or use password login.',
                 'match_score' => $matchScore
             ], 401);
         }
 
+        // Rotate the session identifier after successful Face ID authentication.
+        session_regenerate_id(true);
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['name'] = $user['name'];
 
-        if ($remember) {
-            setcookie('ktix_remember', bin2hex(random_bytes(16)), time() + 60 * 60 * 24 * 30, '/', '', false, true);
-        }
-
+        // Persistent "Remember me" is not implemented; do not issue a fake token.
         $redirect = roleDashboard($user['role']);
         jsonResponse([
             'ok' => true,
@@ -282,8 +288,8 @@ switch ($action) {
     case 'verify':
         $email = strtolower(trim($_POST['email'] ?? ''));
         $code = trim($_POST['code'] ?? '');
-        if (!$email || !$code) {
-            jsonResponse(['ok' => false, 'message' => 'Email and code are required.'], 400);
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{6}$/', $code)) {
+            jsonResponse(['ok' => false, 'message' => 'Enter a valid email address and 6-digit verification code.'], 400);
         }
         $user = findUserByEmail($email);
         if (!$user) {
@@ -296,7 +302,7 @@ switch ($action) {
         if ($expires && time() > $expires) {
             jsonResponse(['ok' => false, 'message' => 'Verification code has expired. Please request a new one.'], 400);
         }
-        if (($user['verify_code'] ?? '') !== $code) {
+        if (!is_string($user['verify_code'] ?? null) || !hash_equals((string)$user['verify_code'], $code)) {
             jsonResponse(['ok' => false, 'message' => 'Invalid verification code.'], 400);
         }
         updateUser((int)$user['id'], [
@@ -394,7 +400,7 @@ switch ($action) {
         }
 
         $user = findUserByEmail($email);
-        if (!$user) {
+        if (!$user || empty($user['verified'])) {
             jsonResponse(['ok' => false, 'message' => 'Invalid reset request. Check your email and code.'], 400);
         }
         $stored = (string)($user['reset_token'] ?? '');
