@@ -704,7 +704,7 @@ async function goSignupStep3() {
   if (upload) upload.classList.remove('is-invalid', 'shake');
 
   if (!idFile || !extractedIdInfo) {
-    const msg = 'Please upload or capture your government ID and wait until the name is matched first.';
+    const msg = 'Please upload or capture your government ID first.';
     const err = document.getElementById('err-id-upload');
     if (err) {
       const span = err.querySelector('span');
@@ -718,6 +718,16 @@ async function goSignupStep3() {
       upload.classList.add('shake');
     }
     showAlert('signup-alert', 'error', msg);
+    return;
+  }
+  if (extractedIdInfo && extractedIdInfo.nameConfirmed === false) {
+    showAlert('signup-alert', 'warning', 'Please check the box to confirm this is your ID before continuing.');
+    const cb = document.getElementById('id-name-confirm');
+    if (cb) {
+      cb.focus();
+      const g = document.getElementById('id-name-confirm-group');
+      if (g) { g.classList.add('shake'); setTimeout(() => g.classList.remove('shake'), 600); }
+    }
     return;
   }
   // OCR score is soft — only block empty/unreadable documents (threshold lowered)
@@ -1243,6 +1253,53 @@ function closeValidationModal() {
   if (overlay) overlay.classList.remove('show');
 }
 
+
+/** Build a high-contrast, upscaled canvas for better OCR on ID photos */
+function buildOcrCanvas(sourceCanvas) {
+  const scale = sourceCanvas.width < 900 ? 2.2 : (sourceCanvas.width < 1400 ? 1.6 : 1.2);
+  const w = Math.round(sourceCanvas.width * scale);
+  const h = Math.round(sourceCanvas.height * scale);
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(sourceCanvas, 0, 0, w, h);
+  try {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    // Grayscale + contrast boost (helps Tesseract on phone photos)
+    const contrast = 1.35;
+    const intercept = 128 * (1 - contrast);
+    for (let i = 0; i < d.length; i += 4) {
+      let y = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      y = contrast * y + intercept;
+      y = y < 0 ? 0 : y > 255 ? 255 : y;
+      d[i] = d[i + 1] = d[i + 2] = y;
+    }
+    ctx.putImageData(img, 0, 0);
+  } catch (e) { /* security / size limits — use color canvas */ }
+  return out;
+}
+
+/** Reject OCR "names" that are clearly not person names */
+function isGarbageName(name) {
+  if (!name || name.trim().length < 3) return true;
+  const tokens = normalizePersonName(name).split(' ').filter(Boolean);
+  if (!tokens.length) return true;
+  // Too many very short tokens / nonsense
+  const short = tokens.filter(t => t.length <= 2).length;
+  if (short >= tokens.length) return true;
+  // Common OCR noise words from LTO cards / backgrounds
+  const noise = new Set(['LZ', 'USE', 'GROW', 'CIS', 'VAT', 'WANMASO', 'NONE', 'NBI', 'AGENCY', 'CODE', 'TYPE', 'BLACK', 'HEIGHT', 'WEIGHT', 'SEX', 'MALE', 'FEMALE', 'PHL', 'LTO', 'REPUBLIC']);
+  const noiseHits = tokens.filter(t => noise.has(t) || ID_OCR_STOPWORDS.has(t)).length;
+  if (noiseHits >= Math.ceil(tokens.length * 0.5)) return true;
+  // No token longer than 3 chars that looks like a name
+  if (!tokens.some(t => t.length >= 4)) return true;
+  return false;
+}
+
 async function processIdCanvas(canvas, sourceLabel, fileObj) {
   idFile = fileObj;
   idCaptureSource = sourceLabel === 'Camera' ? 'camera' : 'upload';
@@ -1269,11 +1326,12 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   idFaceDescriptor = (faceResult && faceResult.descriptor) ? faceResult.descriptor : null;
   const faceQ = idHasFace ? Math.round((faceResult.score || 0) * 100) : 0;
 
-  // 2) OCR with Tesseract (primary path for name matching)
+  // 2) OCR with Tesseract — preprocess image for better read on phone photos
   showAlert('signup-alert', 'info', 'Reading ID text (OCR)…');
+  const ocrCanvas = buildOcrCanvas(canvas);
   try {
     if (typeof Tesseract !== 'undefined') {
-      const { data } = await Tesseract.recognize(canvas, 'eng', {
+      const { data } = await Tesseract.recognize(ocrCanvas, 'eng', {
         logger: m => {
           if (m.status === 'recognizing text' && m.progress != null) {
             const pct = Math.round(m.progress * 100);
@@ -1284,6 +1342,15 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
         }
       });
       idOcrText = (data && data.text) ? data.text : '';
+      // Second pass on original if first pass is very short
+      if (idOcrText.trim().length < 20) {
+        try {
+          const { data: data2 } = await Tesseract.recognize(canvas, 'eng');
+          if (data2 && data2.text && data2.text.length > idOcrText.length) {
+            idOcrText = data2.text;
+          }
+        } catch (e2) { /* ignore */ }
+      }
     } else {
       console.warn('Tesseract.js not loaded');
       idOcrText = '';
@@ -1330,70 +1397,93 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   const nameFromForm = getSignupFullName();
   let nameFromId = extractNameFromOcrText(idOcrText);
+  // Ignore OCR "names" that are noise (e.g. LZ USE GROW CIS VAT WANMASO)
+  if (isGarbageName(nameFromId)) nameFromId = '';
+
   const idNumber = extractIdNumberFromText(idOcrText) || 'Not clearly readable';
 
-  // 4) HARD RULE: name on ID must match Step 1 — with OCR-tolerant fallbacks
-  // Compare using First Middle Last AND Last, First Middle (DL printed order)
-  let nameCheck = namesMatch(nameFromForm, nameFromId || '');
+  // 4) Match strategy (order matters):
+  //    a) Search form name tokens inside FULL OCR text (most reliable when extract is wrong)
+  //    b) Structured name vs structured extract
+  //    c) DL order Last, First Middle
+  let nameCheck = { match: false, score: 0, shared: [] };
+
+  const parts = getSignupNameParts();
+  const formTokens = [parts.last, ...parts.first.split(/\s+/), ...parts.middle.split(/\s+/)]
+    .map(t => t.trim()).filter(t => t.length >= 2);
+  const looseFromParts = ocrContainsFormName(formTokens.join(' '), idOcrText);
+  if (looseFromParts.match) {
+    nameCheck = looseFromParts;
+    if (!nameFromId) nameFromId = nameFromForm;
+  }
+
+  if (!nameCheck.match) {
+    const looseFull = ocrContainsFormName(nameFromForm, idOcrText);
+    if (looseFull.match) {
+      nameCheck = looseFull;
+      if (!nameFromId) nameFromId = nameFromForm;
+    }
+  }
+
   if (!nameCheck.match && nameFromId) {
-    const alt = namesMatch(getSignupNameAsOnId().replace(',', ' '), nameFromId);
+    nameCheck = namesMatch(nameFromForm, nameFromId);
+  }
+  if (!nameCheck.match && nameFromId) {
+    const alt = namesMatch(getSignupNameAsOnId().replace(/,/g, ' '), nameFromId);
     if (alt.match) nameCheck = alt;
   }
 
-  // Fallback A: scan whole OCR for Last / First / Middle tokens from the form fields
-  if (!nameCheck.match) {
-    const parts = getSignupNameParts();
-    const tokens = [parts.last, ...parts.first.split(/\s+/), ...parts.middle.split(/\s+/)]
-      .map(t => t.trim()).filter(t => t.length >= 2);
-    const loose = ocrContainsFormName(tokens.join(' '), idOcrText);
-    if (loose.match) {
-      nameCheck = loose;
-      if (!nameFromId) nameFromId = nameFromForm;
+  // Extra: substring search for each form token in raw OCR (handles glued words)
+  if (!nameCheck.match && idOcrText) {
+    const ocrNorm = normalizePersonName(idOcrText).replace(/\s+/g, '');
+    const shared = [];
+    for (const t of formTokens) {
+      const tn = normalizePersonName(t);
+      if (tn.length >= 4 && ocrNorm.includes(tn)) shared.push(t);
+      else if (tn.length >= 5) {
+        // allow 1-char OCR typo by checking prefix
+        const pref = tn.slice(0, Math.min(5, tn.length));
+        if (ocrNorm.includes(pref)) shared.push(t);
+      }
     }
-  }
-  if (!nameCheck.match) {
-    const loose2 = ocrContainsFormName(nameFromForm, idOcrText);
-    if (loose2.match) {
-      nameCheck = loose2;
+    const score = formTokens.length ? Math.round((shared.length / formTokens.length) * 100) : 0;
+    if (shared.length >= 2 || (shared.length >= 1 && formTokens.length <= 2)) {
+      nameCheck = { match: true, score: Math.max(score, 50), shared, formTokens, ocrTokens: [] };
       if (!nameFromId) nameFromId = nameFromForm;
     }
   }
 
-  if (!nameFromId && !nameCheck.match) {
-    document.getElementById('id-extracted').style.display = 'none';
-    document.getElementById('id-continue-btn').disabled = true;
-    showValidationModal(
-      'Name on ID not clear',
-      'We could not clearly read a full name from this ID. Please upload a photo where the name is visible, or make sure Step 1 uses the same name printed on your ID.',
-      '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm || '—') +
-      '<br><strong>Tip:</strong> For a Driver\'s License, the name line looks like: <em>PENAFIEL, MARK CYRIL BALUCA</em>. Crop so that line is sharp and try again.'
-    );
-    showAlert('signup-alert', 'error', 'Name on ID not clear — see popup.');
-    idFile = null;
-    extractedIdInfo = null;
-    return;
-  }
+  // Soft policy (customer-friendly, not too strict):
+  // - Strong match → accept
+  // - Weak/garbled OCR → accept after customer confirms the name is theirs
+  // - Clear DIFFERENT person name from OCR → block
+  const ocrLooksLikeDifferentPerson =
+    nameFromId &&
+    !isGarbageName(nameFromId) &&
+    !nameCheck.match &&
+    (nameCheck.score || 0) < 25 &&
+    namesMatch(nameFromForm, nameFromId).score < 25;
 
-  if (!nameCheck.match) {
+  if (ocrLooksLikeDifferentPerson) {
     document.getElementById('id-extracted').style.display = 'none';
     idFile = null;
     extractedIdInfo = null;
     document.getElementById('id-continue-btn').disabled = true;
     showValidationModal(
       'Name does not match ID',
-      'The name you entered does not match the name detected on the ID. Only a matching name can continue.',
+      'The name on this ID looks different from what you entered. Please use your own ID, or fix the name on Step 1.',
       '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm) +
-      '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId || '(could not parse)') +
-      '<br><strong>Match score:</strong> ' + nameCheck.score + '%' +
-      '<br><br>Fix the spelling on Step 1, or upload the ID that belongs to that name.'
+      '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId) +
+      '<br><strong>Match score:</strong> ' + (nameCheck.score || 0) + '%'
     );
-    showAlert('signup-alert', 'error', 'Credentials do not match the ID — see popup.');
+    showAlert('signup-alert', 'error', 'This ID appears to belong to someone else.');
     return;
   }
 
-  // Success — face quality is informational only
+  const needsConfirm = !nameCheck.match;
+  // Always keep the uploaded file when OCR is just unclear (customer path)
   extractedIdInfo = {
-    fullName: nameFromId || nameFromForm,
+    fullName: (!isGarbageName(nameFromId) && nameFromId) ? nameFromId : nameFromForm,
     formName: nameFromForm,
     idNumber,
     idType,
@@ -1401,7 +1491,8 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     faceQuality: faceQ,
     autoDetected: !!(detection.type && detection.confidence >= 20),
     detectionConfidence: detection.confidence || 0,
-    nameMatchScore: nameCheck.score
+    nameMatchScore: nameCheck.score || 0,
+    nameConfirmed: !needsConfirm
   };
 
   document.getElementById('id-name').textContent = extractedIdInfo.fullName || '—';
@@ -1409,12 +1500,43 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
   document.getElementById('id-type').textContent =
     (extractedIdInfo.idType ? extractedIdInfo.idType + (extractedIdInfo.autoDetected ? ' (auto-matched)' : '') : '—');
   document.getElementById('id-source').textContent = sourceLabel || '—';
+
+  // Optional confirm checkbox when OCR was unclear
+  let confirmHtml = '';
+  if (needsConfirm) {
+    confirmHtml =
+      '<div class="checkbox-group" id="id-name-confirm-group" style="margin-top:0.75rem;text-align:left;">' +
+      '<input type="checkbox" id="id-name-confirm">' +
+      '<label for="id-name-confirm">I confirm this is <strong>my</strong> government ID and the name on Step 1 matches the ID.</label>' +
+      '</div>';
+  }
   document.getElementById('id-ocr-status').innerHTML =
-    `<i class="fas fa-shield-alt"></i> Name match ${nameCheck.score}% · document score ${idOcrScore}/100` +
-    (idHasFace ? ` · face on ID ${faceQ}%` : ' · face not required for this step') +
-    (extractedIdInfo.autoDetected ? ` · type matched automatically` : '');
+    (needsConfirm
+      ? '<i class="fas fa-info-circle"></i> Photo accepted · automatic name read was unclear — please confirm below'
+      : `<i class="fas fa-shield-alt"></i> Name match ${nameCheck.score || 0}% · document score ${idOcrScore}/100`) +
+    (idHasFace ? ` · face on ID ${faceQ}%` : '') +
+    (extractedIdInfo.autoDetected ? ` · type matched automatically` : '') +
+    confirmHtml;
+
   document.getElementById('id-extracted').style.display = 'block';
-  document.getElementById('id-continue-btn').disabled = false;
+
+  const contBtn = document.getElementById('id-continue-btn');
+  if (needsConfirm) {
+    contBtn.disabled = true;
+    const cb = document.getElementById('id-name-confirm');
+    if (cb) {
+      cb.onchange = function () {
+        extractedIdInfo.nameConfirmed = !!cb.checked;
+        contBtn.disabled = !cb.checked;
+      };
+    }
+    showAlert('signup-alert', 'warning',
+      'ID photo accepted. We could not auto-read the name clearly. Confirm it is your ID to continue.');
+  } else {
+    contBtn.disabled = false;
+    showAlert('signup-alert', 'success',
+      'ID accepted · name matched · type: ' + idType + '. Continue to live face scan.');
+  }
 
   clearFieldError('id-file', 'err-id-upload');
   const uploadArea = document.getElementById('id-upload-area');
@@ -1422,10 +1544,6 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   const fnEl = document.getElementById('id-filename');
   if (fnEl && fileObj) fnEl.textContent = fileObj.name || (sourceLabel === 'Camera' ? 'Camera capture' : 'Uploaded');
-
-  showAlert('signup-alert', 'success',
-    'ID accepted · name matched to your credentials · type: ' + idType +
-    '. Continue to live face scan.');
 }
 
 function processIdImageFile(file, sourceLabel) {
@@ -1447,14 +1565,23 @@ function processIdImageFile(file, sourceLabel) {
         return;
       }
       const canvas = document.createElement('canvas');
-      const max = 1280;
+      // Keep more resolution for OCR (phone photos of IDs need detail)
+      const max = 1800;
       let w = img.width, h = img.height;
       if (w > max || h > max) {
         const r = Math.min(max / w, max / h);
         w = Math.round(w * r); h = Math.round(h * r);
       }
+      // Upscale very small images so OCR has more pixels
+      if (w < 800 && w > 0) {
+        const r = 800 / w;
+        w = Math.round(w * r); h = Math.round(h * r);
+      }
       canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
       processIdCanvas(canvas, sourceLabel || 'Upload', file);
     };
     img.onerror = function () {
