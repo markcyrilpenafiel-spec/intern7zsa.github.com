@@ -51,8 +51,8 @@ if (isLoggedIn()) {
                   <div class="field-error" id="err-login-password"><i class="fas fa-exclamation-circle"></i> <span></span></div>
                 </div>
                 <div class="checkbox-group">
-                  <input type="checkbox" id="remember-me">
-                  <label for="remember-me">Remember me</label>
+                  <input type="checkbox" id="remember-me" disabled aria-disabled="true">
+                  <label for="remember-me" title="Persistent sign-in is not available yet">Remember me (coming soon)</label>
                 </div>
                 <button type="submit" class="btn btn-primary" id="login-btn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
               </div>
