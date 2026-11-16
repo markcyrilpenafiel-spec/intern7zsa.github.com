@@ -192,22 +192,17 @@ switch ($action) {
             jsonResponse(['ok' => false, 'message' => 'Please complete facial recognition before creating an account.'], 400);
         }
 
-        // ── Strict ID validation ──
+        // ── ID validation (lenient on quality; name match is enforced client-side) ──
         if (!$idType || !in_array($idType, ['National ID', 'Passport', "Driver's License", 'PhilSys ID'], true)) {
             jsonResponse(['ok' => false, 'message' => 'Please select a valid ID type.'], 400);
         }
-        if (!$idHasFace) {
-            jsonResponse(['ok' => false, 'message' => 'No face detected on the uploaded ID. Please upload a clear photo of a real government ID that shows your face.'], 400);
+        // Face on ID and photo quality are soft — do not block low-quality phone captures.
+        // Live face embedding is still required above for account creation.
+        if ($idOcrScore < 10) {
+            jsonResponse(['ok' => false, 'message' => 'Could not read enough text from the ID. Try another photo of your government ID.'], 400);
         }
-        if ($idFaceQuality < 40) {
-            jsonResponse(['ok' => false, 'message' => 'ID photo quality is too low. Use a clearer, well-lit photo of your ID.'], 400);
-        }
-        // OCR must find ID-like text (client-side Tesseract)
-        if ($idOcrScore < 25) {
-            jsonResponse(['ok' => false, 'message' => 'This does not appear to be a valid ID document. Upload a real government-issued ID (National ID, Passport, Driver\'s License, or PhilSys).'], 400);
-        }
-        if (strlen($idNumber) < 4) {
-            jsonResponse(['ok' => false, 'message' => 'Could not read a valid ID number from the document. Ensure the ID is clear and fully visible.'], 400);
+        if (strlen($idNumber) < 2) {
+            jsonResponse(['ok' => false, 'message' => 'Could not read an ID number from the document. Ensure text on the ID is visible.'], 400);
         }
 
         // Save ID image
