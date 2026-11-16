@@ -142,11 +142,33 @@ function clearGroupError(groupId, errId) {
 }
 
 function clearAllSignupFieldErrors() {
-  ['signup-name', 'signup-email', 'signup-password', 'signup-password2'].forEach(id => clearFieldError(id));
+  ['signup-last-name', 'signup-first-name', 'signup-middle-name', 'signup-email', 'signup-password', 'signup-password2'].forEach(id => clearFieldError(id));
   clearGroupError('signup-policies-group', 'err-signup-policies');
   clearFieldError('id-file', 'err-id-upload');
   const upload = document.getElementById('id-upload-area');
   if (upload) upload.classList.remove('is-invalid', 'shake');
+}
+
+/** Name parts from Step 1 (matches PH ID: Last, First, Middle) */
+function getSignupNameParts() {
+  const last = (document.getElementById('signup-last-name')?.value || '').trim();
+  const first = (document.getElementById('signup-first-name')?.value || '').trim();
+  const middle = (document.getElementById('signup-middle-name')?.value || '').trim();
+  return { last, first, middle };
+}
+
+/** Combined full name for API + matching: First Middle Last */
+function getSignupFullName() {
+  const { last, first, middle } = getSignupNameParts();
+  return [first, middle, last].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Also return "LAST, FIRST MIDDLE" style for DL-style comparison */
+function getSignupNameAsOnId() {
+  const { last, first, middle } = getSignupNameParts();
+  const given = [first, middle].filter(Boolean).join(' ');
+  if (last && given) return last.toUpperCase() + ', ' + given.toUpperCase();
+  return getSignupFullName().toUpperCase();
 }
 
 function clearAllLoginFieldErrors() {
@@ -614,24 +636,30 @@ function nextSignupStep(step) {
 
 function validateSignupStep1() {
   clearAllSignupFieldErrors();
-  const name = document.getElementById('signup-name').value.trim();
+  const { last, first, middle } = getSignupNameParts();
   const email = document.getElementById('signup-email').value.trim();
   const pass = document.getElementById('signup-password').value;
   const pass2 = document.getElementById('signup-password2').value;
   const policies = document.getElementById('signup-policies').checked || policiesAccepted;
   let ok = true;
 
-  if (!name) {
-    setFieldError('signup-name', 'Please enter your full name.');
+  const nameRe = /^[a-zA-ZÀ-ÿñÑ\s.'\-]+$/;
+  if (!last) {
+    setFieldError('signup-last-name', 'Please enter your last name (as on your ID).');
     ok = false;
-  } else if (/^\d+$/.test(name.replace(/\s/g, ''))) {
-    setFieldError('signup-name', 'Full name cannot be only numbers. Please enter your real name.');
+  } else if (!nameRe.test(last) || /^\d+$/.test(last.replace(/\s/g, ''))) {
+    setFieldError('signup-last-name', 'Last name can only contain letters.');
     ok = false;
-  } else if (!/^[a-zA-ZÀ-ÿñÑ\s.'\-]+$/.test(name)) {
-    setFieldError('signup-name', 'Full name can only contain letters, spaces, hyphens, and apostrophes.');
+  }
+  if (!first) {
+    setFieldError('signup-first-name', 'Please enter your first name (as on your ID).');
     ok = false;
-  } else if (name.trim().split(/\s+/).length < 2) {
-    setFieldError('signup-name', 'Please enter your full name (first and last name).');
+  } else if (!nameRe.test(first) || /^\d+$/.test(first.replace(/\s/g, ''))) {
+    setFieldError('signup-first-name', 'First name can only contain letters.');
+    ok = false;
+  }
+  if (middle && (!nameRe.test(middle) || /^\d+$/.test(middle.replace(/\s/g, '')))) {
+    setFieldError('signup-middle-name', 'Middle name can only contain letters.');
     ok = false;
   }
   if (!email) {
@@ -988,54 +1016,133 @@ const ID_OCR_STOPWORDS = new Set([
 
 /**
  * Try to pull a person name from OCR text (PH ID layouts).
- * Returns best-effort full name string or empty string.
+ * Handles Driver's License: "PENAFIEL, MARK CYRIL BALUCA"
+ * National ID: Surname / Given Name / Middle Name fields.
  */
 function extractNameFromOcrText(text) {
   if (!text || text.length < 4) return '';
 
-  const lines = text
-    .split(/\r?\n/)
-    .map(l => l.replace(/[^\wÀ-ÿñÑ\s.'\-]/g, ' ').replace(/\s+/g, ' ').trim())
-    .filter(l => l.length >= 3);
+  // Keep commas for "LAST, FIRST MIDDLE" pattern; normalize other noise
+  const rawLines = text.split(/\r?\n/);
+  const lines = rawLines
+    .map(l => l.replace(/[^\wÀ-ÿñÑ\s.,'\-]/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(l => l.length >= 2);
+  const fullUpper = text.toUpperCase().replace(/[^\wÀ-ŸÑ\s.,'\-]/g, ' ').replace(/\s+/g, ' ');
 
-  // 1) Labelled fields: "Last Name: CRUZ", "Given Names: JUAN", etc.
+  // 1) PH Driver's License / Passport style: LASTNAME, FIRST MIDDLE
+  //    e.g. PENAFIEL, MARK CYRIL BALUCA
+  const commaName = fullUpper.match(
+    /\b([A-ZÑ]{2,}(?:\s+[A-ZÑ]{2,})?)\s*,\s*([A-ZÑ]{2,}(?:\s+[A-ZÑ]{2,}){0,3})\b/
+  );
+  if (commaName) {
+    const last = commaName[1].trim();
+    const rest = commaName[2].trim();
+    // Skip if looks like a label, not a person
+    const combined = (last + ' ' + rest).split(/\s+/);
+    const stopHits = combined.filter(w => ID_OCR_STOPWORDS.has(w)).length;
+    if (stopHits < combined.length / 2 && last.length >= 2 && rest.length >= 2) {
+      return (rest + ' ' + last).replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  // 2) Line immediately after "Last Name, First Name, Middle Name" label (LTO card)
+  for (let i = 0; i < lines.length; i++) {
+    const u = lines[i].toUpperCase();
+    if (/LAST\s*NAME.*FIRST\s*NAME|LAST\s*NAME,\s*FIRST/.test(u) ||
+        /LAST\s*NAME.*MIDDLE\s*NAME/.test(u)) {
+      // Name is often on the next line
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const next = lines[j].toUpperCase().replace(/[^\wÀ-ŸÑ\s,]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (next.length < 5) continue;
+        if (/LICENSE|REPUBLIC|ADDRESS|DATE|SEX|WEIGHT|NATIONALITY|AGENCY/.test(next)) continue;
+        // "PENAFIEL, MARK CYRIL BALUCA"
+        const m = next.match(/^([A-ZÑ]{2,})\s*,\s*([A-ZÑ][A-ZÑ\s]{2,})$/);
+        if (m) return (m[2].trim() + ' ' + m[1].trim()).replace(/\s+/g, ' ');
+        // "PENAFIEL MARK CYRIL BALUCA" without comma
+        const words = next.split(/\s+/).filter(w => w.length > 1 && !ID_OCR_STOPWORDS.has(w));
+        if (words.length >= 2 && words.length <= 5) return words.join(' ');
+      }
+    }
+  }
+
+  // 3) Labelled fields: Surname / Given Name / etc.
   let last = '', first = '', middle = '';
   for (const line of lines) {
     const u = line.toUpperCase();
     const mLast = u.match(/(?:LAST\s*NAME|SURNAME|APELYIDO)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{1,40})/);
-    if (mLast && !last) last = mLast[1].trim();
+    if (mLast && !last) {
+      const v = mLast[1].trim().split(/\s+/).filter(w => !ID_OCR_STOPWORDS.has(w) && w.length > 1);
+      if (v.length) last = v[0];
+    }
     const mFirst = u.match(/(?:GIVEN\s*NAMES?|FIRST\s*NAME|PANGALAN)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{1,40})/);
-    if (mFirst && !first) first = mFirst[1].trim();
-    const mMid = u.match(/(?:MIDDLE\s*NAME|M\.?\s*I\.?)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{0,30})/);
-    if (mMid && !middle) middle = mMid[1].trim();
-    const mFull = u.match(/(?:FULL\s*NAME|NAME)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{3,50})/);
-    if (mFull && !last && !first) {
-      const parts = mFull[1].trim().split(/\s+/).filter(Boolean);
-      if (parts.length >= 2) return parts.join(' ');
+    if (mFirst && !first) {
+      first = mFirst[1].trim().split(/\s+/).filter(w => !ID_OCR_STOPWORDS.has(w)).join(' ');
+    }
+    const mMid = u.match(/(?:MIDDLE\s*NAME)\s*[:\-]?\s*([A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]{0,30})/);
+    if (mMid && !middle) {
+      middle = mMid[1].trim().split(/\s+/).filter(w => !ID_OCR_STOPWORDS.has(w)).join(' ');
     }
   }
   if (last || first) {
     return [first, middle, last].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   }
 
-  // 2) ALL-CAPS multi-word lines that look like names (exclude stopwords-heavy lines)
+  // 4) ALL-CAPS multi-word lines that look like names
   const candidates = [];
   for (const line of lines) {
-    if (!/^[A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]+$/.test(line)) continue;
-    const words = line.split(/\s+/).filter(w => w.length > 1);
-    if (words.length < 2 || words.length > 5) continue;
+    const u = line.toUpperCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!/^[A-ZÀ-ŸÑ][A-ZÀ-ŸÑ\s.'\-]+$/.test(u)) continue;
+    const words = u.split(/\s+/).filter(w => w.length > 1);
+    if (words.length < 2 || words.length > 6) continue;
     const stopHits = words.filter(w => ID_OCR_STOPWORDS.has(w)).length;
     if (stopHits >= Math.ceil(words.length / 2)) continue;
     if (words.every(w => w.length <= 2)) continue;
-    candidates.push(line);
+    candidates.push(words.filter(w => !ID_OCR_STOPWORDS.has(w)).join(' '));
   }
   if (candidates.length) {
-    // Prefer longer plausible names
     candidates.sort((a, b) => b.length - a.length);
     return candidates[0];
   }
 
+  // 5) Last resort: collect person-like tokens from entire OCR blob
+  const tokens = fullUpper.split(/[\s,]+/).filter(w =>
+    w.length >= 3 &&
+    /^[A-ZÑ]+$/.test(w) &&
+    !ID_OCR_STOPWORDS.has(w) &&
+    !/^\d/.test(w)
+  );
+  // Prefer sequences of 2–4 consecutive person tokens
+  if (tokens.length >= 2) {
+    return tokens.slice(0, Math.min(4, tokens.length)).join(' ');
+  }
+
   return '';
+}
+
+/**
+ * Fallback: does the OCR text contain the form-name tokens?
+ * Used when structured name extraction fails but words like PENAFIEL / MARK appear in OCR.
+ */
+function ocrContainsFormName(formName, ocrText) {
+  if (!formName || !ocrText) return { match: false, score: 0, shared: [] };
+  const formTokens = normalizePersonName(formName).split(' ').filter(w => w.length >= 2 && !ID_OCR_STOPWORDS.has(w));
+  const ocrNorm = normalizePersonName(ocrText);
+  const ocrTokens = ocrNorm.split(' ').filter(w => w.length >= 2);
+  if (!formTokens.length || !ocrTokens.length) return { match: false, score: 0, shared: [] };
+
+  const shared = [];
+  for (const ft of formTokens) {
+    for (const ot of ocrTokens) {
+      if (tokenSimilar(ft, ot)) {
+        if (!shared.includes(ft)) shared.push(ft);
+        break;
+      }
+    }
+  }
+  const score = Math.round((shared.length / formTokens.length) * 100);
+  // 2+ tokens or strong single surname match
+  const match = shared.length >= 2 || (shared.length >= 1 && formTokens.length <= 2 && shared[0].length >= 5);
+  return { match, score, shared, formTokens, ocrTokens };
 }
 
 /** Normalize for comparison: uppercase, strip accents/punctuation, collapse spaces */
@@ -1221,27 +1328,47 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
     setSelectedIdType(idType);
   }
 
-  const nameFromForm = document.getElementById('signup-name').value.trim();
-  const nameFromId = extractNameFromOcrText(idOcrText);
+  const nameFromForm = getSignupFullName();
+  let nameFromId = extractNameFromOcrText(idOcrText);
   const idNumber = extractIdNumberFromText(idOcrText) || 'Not clearly readable';
 
-  // 4) HARD RULE (only this blocks registration): name on ID must match Step 1 credentials
-  const nameCheck = namesMatch(nameFromForm, nameFromId || '');
+  // 4) HARD RULE: name on ID must match Step 1 — with OCR-tolerant fallbacks
+  // Compare using First Middle Last AND Last, First Middle (DL printed order)
+  let nameCheck = namesMatch(nameFromForm, nameFromId || '');
+  if (!nameCheck.match && nameFromId) {
+    const alt = namesMatch(getSignupNameAsOnId().replace(',', ' '), nameFromId);
+    if (alt.match) nameCheck = alt;
+  }
 
-  if (!nameFromId) {
-    // Soft: allow continue with a warning if user confirms form name is correct —
-    // but still require some OCR text so random images don't pass.
-    // Prefer asking user to retry once; if OCR has any person-like tokens, show them.
+  // Fallback A: scan whole OCR for Last / First / Middle tokens from the form fields
+  if (!nameCheck.match) {
+    const parts = getSignupNameParts();
+    const tokens = [parts.last, ...parts.first.split(/\s+/), ...parts.middle.split(/\s+/)]
+      .map(t => t.trim()).filter(t => t.length >= 2);
+    const loose = ocrContainsFormName(tokens.join(' '), idOcrText);
+    if (loose.match) {
+      nameCheck = loose;
+      if (!nameFromId) nameFromId = nameFromForm;
+    }
+  }
+  if (!nameCheck.match) {
+    const loose2 = ocrContainsFormName(nameFromForm, idOcrText);
+    if (loose2.match) {
+      nameCheck = loose2;
+      if (!nameFromId) nameFromId = nameFromForm;
+    }
+  }
+
+  if (!nameFromId && !nameCheck.match) {
     document.getElementById('id-extracted').style.display = 'none';
     document.getElementById('id-continue-btn').disabled = true;
     showValidationModal(
       'Name on ID not clear',
       'We could not clearly read a full name from this ID. Please upload a photo where the name is visible, or make sure Step 1 uses the same name printed on your ID.',
       '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm || '—') +
-      '<br><strong>Tip:</strong> Crop closer to the name fields (Surname / Given Name) and try again. Face quality is not blocking you.'
+      '<br><strong>Tip:</strong> For a Driver\'s License, the name line looks like: <em>PENAFIEL, MARK CYRIL BALUCA</em>. Crop so that line is sharp and try again.'
     );
     showAlert('signup-alert', 'error', 'Name on ID not clear — see popup.');
-    // Keep idFile so user can retry without re-selecting if they only fix name — clear validation state only
     idFile = null;
     extractedIdInfo = null;
     return;
@@ -1256,9 +1383,9 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
       'Name does not match ID',
       'The name you entered does not match the name detected on the ID. Only a matching name can continue.',
       '<strong>Name you entered:</strong> ' + escapeHtml(nameFromForm) +
-      '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId) +
+      '<br><strong>Name read from ID:</strong> ' + escapeHtml(nameFromId || '(could not parse)') +
       '<br><strong>Match score:</strong> ' + nameCheck.score + '%' +
-      '<br><br>Fix the spelling on Step 1, or upload the ID that belongs to that name. Photo quality is not the issue here.'
+      '<br><br>Fix the spelling on Step 1, or upload the ID that belongs to that name.'
     );
     showAlert('signup-alert', 'error', 'Credentials do not match the ID — see popup.');
     return;
@@ -1266,7 +1393,7 @@ async function processIdCanvas(canvas, sourceLabel, fileObj) {
 
   // Success — face quality is informational only
   extractedIdInfo = {
-    fullName: nameFromId,
+    fullName: nameFromId || nameFromForm,
     formName: nameFromForm,
     idNumber,
     idType,
@@ -1714,7 +1841,10 @@ async function handleSignup() {
   try {
     const fd = new FormData();
     fd.append('action', 'signup');
-    fd.append('name', document.getElementById('signup-name').value.trim());
+    fd.append('name', getSignupFullName());
+    fd.append('last_name', getSignupNameParts().last);
+    fd.append('first_name', getSignupNameParts().first);
+    fd.append('middle_name', getSignupNameParts().middle);
     fd.append('email', document.getElementById('signup-email').value.trim());
     fd.append('password', document.getElementById('signup-password').value);
     fd.append('policies', '1');
@@ -1958,7 +2088,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const fieldMap = [
     ['login-email', 'login-email'],
     ['login-password', 'login-password'],
-    ['signup-name', 'signup-name'],
+    ['signup-last-name', 'signup-last-name'],
+    ['signup-first-name', 'signup-first-name'],
+    ['signup-middle-name', 'signup-middle-name'],
     ['signup-email', 'signup-email'],
     ['signup-password', 'signup-password'],
     ['signup-password2', 'signup-password2'],
