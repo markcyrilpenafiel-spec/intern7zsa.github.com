@@ -78,10 +78,23 @@ if (isLoggedIn()) {
 
             <!-- Step 1 -->
             <div id="signup-step-1" class="signup-step">
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.85rem; text-align:center;">
+                Enter your name <strong>exactly as printed on your government ID</strong> (Last Name, First Name, Middle Name).
+              </p>
               <div class="form-group">
-                <label>Full Name <span class="required">*</span></label>
-                <input type="text" class="form-control" id="signup-name" placeholder="Juan Dela Cruz" autocomplete="name">
-                <div class="field-error" id="err-signup-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+                <label>Last Name <span class="required">*</span></label>
+                <input type="text" class="form-control" id="signup-last-name" placeholder="Penafiel" autocomplete="family-name">
+                <div class="field-error" id="err-signup-last-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+              </div>
+              <div class="form-group">
+                <label>First Name <span class="required">*</span></label>
+                <input type="text" class="form-control" id="signup-first-name" placeholder="Mark Cyril" autocomplete="given-name">
+                <div class="field-error" id="err-signup-first-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
+              </div>
+              <div class="form-group">
+                <label>Middle Name <span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">(optional if none on ID)</span></label>
+                <input type="text" class="form-control" id="signup-middle-name" placeholder="Baluca" autocomplete="additional-name">
+                <div class="field-error" id="err-signup-middle-name"><i class="fas fa-exclamation-circle"></i> <span></span></div>
               </div>
               <div class="form-group">
                 <label>Email Address <span class="required">*</span></label>
