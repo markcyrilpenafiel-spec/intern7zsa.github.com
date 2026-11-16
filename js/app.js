@@ -47,11 +47,26 @@ function showPanel(name) {
   });
 }
 
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+}
+
 function showAlert(containerId, type, message) {
   const el = document.getElementById(containerId);
   if (!el) return;
+  const allowedTypes = ['success', 'error', 'warning', 'info'];
+  const safeType = allowedTypes.includes(type) ? type : 'info';
   const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
-  el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${icons[type] || 'info-circle'}"></i> ${message}</div>`;
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${safeType}`;
+  const icon = document.createElement('i');
+  icon.className = `fas fa-${icons[safeType]}`;
+  const text = document.createElement('span');
+  text.textContent = String(message ?? '');
+  alert.append(icon, document.createTextNode(' '), text);
+  el.replaceChildren(alert);
 }
 
 function setFieldError(inputId, message, extraTargetId) {
@@ -66,7 +81,11 @@ function setFieldError(inputId, message, extraTargetId) {
   if (err) {
     const span = err.querySelector('span');
     if (span) span.textContent = message;
-    else err.innerHTML = `<i class="fas fa-exclamation-circle"></i> <span>${message}</span>`;
+    else {
+      const safeSpan = document.createElement('span');
+      safeSpan.textContent = String(message ?? '');
+      err.appendChild(safeSpan);
+    }
     err.classList.add('visible');
   }
 }
@@ -94,7 +113,11 @@ function setGroupError(groupId, errId, message) {
   if (err) {
     const span = err.querySelector('span');
     if (span) span.textContent = message;
-    else err.innerHTML = `<i class="fas fa-exclamation-circle"></i> <span>${message}</span>`;
+    else {
+      const safeSpan = document.createElement('span');
+      safeSpan.textContent = String(message ?? '');
+      err.appendChild(safeSpan);
+    }
     err.classList.add('visible');
   }
 }
@@ -493,7 +516,7 @@ async function captureLoginFace() {
       stopLoginFace();
     } else {
       status.className = 'face-status error';
-      status.innerHTML = `<i class="fas fa-times-circle"></i> ${data.message || 'Face not recognized'}`;
+      status.textContent = data.message || 'Face not recognized';
       video.style.filter = 'blur(18px)';
       showAlert('login-alert', 'error', data.message || 'Face verification failed.');
     }
