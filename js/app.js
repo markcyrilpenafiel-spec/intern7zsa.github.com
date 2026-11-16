@@ -908,6 +908,14 @@ function scoreIdOcrText(text, preferredType) {
 function extractIdNumberFromText(text) {
   const t = text.toUpperCase().replace(/\s+/g, ' ');
 
+  // Words that look like IDs but are document labels — never treat as ID numbers
+  const NOT_ID_NUMBERS = new Set([
+    'NATIONAL', 'IDENTITY', 'IDENTIFICATION', 'PASSPORT', 'LICENSE', 'LICENCE',
+    'DRIVER', 'DRIVERS', 'PHILSYS', 'PHILIPPINE', 'PHILIPPINES', 'REPUBLIC',
+    'CARD', 'SAMPLE', 'VALID', 'OFFICIAL', 'GOVERNMENT', 'PRODUCTION',
+    'COMMUNICATIONS', 'PRESIDENTIAL', 'APO', 'UNIT'
+  ]);
+
   // Philippine LTO license number: e.g. G11-24-664792, N03-12-345678
   const lto = t.match(/\b[A-Z]\d{2}[-\s]?\d{2}[-\s]?\d{5,7}\b/);
   if (lto) return lto[0].replace(/\s/g, '');
@@ -916,8 +924,14 @@ function extractIdNumberFromText(text) {
   const philsys = t.match(/\b\d{4}[-\s]\d{4}[-\s]\d{4}[-\s]\d{4}\b/);
   if (philsys) return philsys[0].replace(/\s/g, '-');
 
-  // Prefer longer alphanumeric tokens (common on IDs)
-  const candidates = t.match(/\b[A-Z0-9][-A-Z0-9]{5,18}\b/g) || [];
+  // Prefer longer alphanumeric tokens that contain at least one digit (real ID numbers)
+  const candidates = (t.match(/\b[A-Z0-9][-A-Z0-9]{4,18}\b/g) || []).filter(c => {
+    const clean = c.replace(/[-]/g, '');
+    if (NOT_ID_NUMBERS.has(clean) || NOT_ID_NUMBERS.has(c)) return false;
+    // Must include a digit — pure words like NATIONAL are not ID numbers
+    if (!/\d/.test(c)) return false;
+    return true;
+  });
   if (candidates.length) {
     candidates.sort((a, b) => {
       const aMixed = /[A-Z]/.test(a) && /\d/.test(a) ? 1 : 0;
@@ -929,7 +943,8 @@ function extractIdNumberFromText(text) {
   }
   const digits = t.match(/\b\d{8,16}\b/);
   if (digits) return digits[0];
-  return 'ID-' + Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Date.now().toString().slice(-4);
+  // Do not invent a fake ID number — return empty so caller can handle "unreadable"
+  return '';
 }
 
 /* ---------- Name extraction & matching (Step 1 form vs ID OCR) ---------- */
